@@ -3,10 +3,8 @@ package org.tpibackend.mstransportes.repositories;
 import org.tpibackend.mstransportes.models.Deposito;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
-import org.springframework.lang.NonNull;
-import java.util.Optional;
+
 
 @Repository
 public interface DepositoRepository extends JpaRepository<Deposito, Integer> {
-    @NonNull Optional<Deposito> findById(@NonNull Integer id);
 }

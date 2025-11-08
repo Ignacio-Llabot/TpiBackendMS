@@ -7,5 +7,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface RutaRepository extends JpaRepository<Ruta, Integer> {
-    // El método findById ya está en JpaRepository; no hace falta redeclararlo.
 }
