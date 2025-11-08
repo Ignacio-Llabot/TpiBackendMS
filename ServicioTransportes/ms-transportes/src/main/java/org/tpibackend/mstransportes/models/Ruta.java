@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 public class Ruta {
 
     @Id
-    @Column(name = "\"idRuta\"")
+    @Column(name = "\"idRuta\"", nullable = false)
     private Integer idRuta;
 
     @Column(name = "\"cantidadTramos\"", nullable = false)

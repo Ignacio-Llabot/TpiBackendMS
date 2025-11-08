@@ -8,5 +8,7 @@ import java.util.Optional;
 @Repository
 public interface TipoCamionRepository extends JpaRepository<TipoCamion, Integer> {
 
+    Optional<TipoCamion> findById(Integer id);
+
     Optional<TipoCamion> findByNombre(String nombre);
 }
