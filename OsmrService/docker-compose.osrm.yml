@@ -1,0 +1,11 @@
+services:
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:latest
+    platform: linux/arm64
+    container_name: osrm
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./osrm-data:/data
+    command: >
+      osrm-routed /data/argentina-251107.osrm
