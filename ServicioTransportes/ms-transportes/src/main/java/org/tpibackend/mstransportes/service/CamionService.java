@@ -4,17 +4,17 @@ import java.util.List;
 import java.util.Objects;
 
 import org.springframework.stereotype.Service;
-import org.tpibackend.mstransportes.models.Camion;
-import org.tpibackend.mstransportes.repositories.CamionRepository;
+import org.tpibackend.mstransportes.entity.Camion;
+import org.tpibackend.mstransportes.repository.CamionRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 
 @Service
-public class CamionesService {
+public class CamionService {
 
     private final CamionRepository camionRepository;
 
-    public CamionesService(CamionRepository camionRepository) {
+    public CamionService(CamionRepository camionRepository) {
         this.camionRepository = camionRepository;
     }
     

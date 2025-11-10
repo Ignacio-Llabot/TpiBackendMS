@@ -1,8 +1,8 @@
-package org.tpibackend.mstransportes.repositories;
+package org.tpibackend.mstransportes.repository;
 
-import org.tpibackend.mstransportes.models.Ubicacion;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.tpibackend.mstransportes.entity.Ubicacion;
 
 @Repository
 public interface UbicacionRepository extends JpaRepository<Ubicacion, Integer> {

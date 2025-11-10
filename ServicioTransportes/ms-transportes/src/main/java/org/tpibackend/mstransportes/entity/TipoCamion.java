@@ -1,4 +1,4 @@
-package org.tpibackend.mstransportes.models;
+package org.tpibackend.mstransportes.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -12,16 +12,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "\"TiposTramo\"")
-public class TipoTramo {
+@Table(name = "\"TiposCamion\"")
+public class TipoCamion {
 
     @Id
-    @Column(name = "\"idTipotramo\"")
-    private Integer idTipoTramo;
+    @Column(name = "\"idTipoCamion\"")
+    private Integer idTipoCamion;
 
     @Column(name = "\"nombre\"", nullable = false)
     private String nombre;
-
-    @Column(name = "\"descripcion\"", nullable = false)
-    private String descripcion;
 }

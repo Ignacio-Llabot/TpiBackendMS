@@ -1,4 +1,4 @@
-package org.tpibackend.mstransportes.models;
+package org.tpibackend.mstransportes.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

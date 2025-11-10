@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.Objects;
 
 import org.springframework.stereotype.Service;
-import org.tpibackend.mstransportes.models.Deposito;
-import org.tpibackend.mstransportes.repositories.DepositoRepository;
+import org.tpibackend.mstransportes.entity.Deposito;
+import org.tpibackend.mstransportes.repository.DepositoRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 
