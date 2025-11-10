@@ -8,4 +8,4 @@ services:
     volumes:
       - ./osrm-data:/data
     command: >
-      osrm-routed /data/argentina-251107.osrm
+      osrm-routed /data/argentina-latest.osrm

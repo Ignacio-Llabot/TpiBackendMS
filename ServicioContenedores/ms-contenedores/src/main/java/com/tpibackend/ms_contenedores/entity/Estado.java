@@ -1,4 +1,4 @@
-package org.tpibackend.mstransportes.models;
+package com.tpibackend.ms_contenedores.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,17 +8,17 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Entity
-@Table(name = "\"Estados\"")
+@Table(name = "Estados")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Estado {
-
-	@Id
-	@Column(name = "\"idEstado\"", nullable = false)
-	private Integer idEstado;
-
-	@Column(name = "\"nombre\"", nullable = false)
-	private String nombre;
+    
+    @Id
+    @Column(name = "idEstado", nullable = false)
+    private Integer idEstado;
+    
+    @Column(name = "nombre", nullable = false)
+    private String nombre;
 }
