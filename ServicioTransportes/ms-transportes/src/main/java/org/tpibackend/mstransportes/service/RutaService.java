@@ -1,20 +1,34 @@
 package org.tpibackend.mstransportes.service;
 
+import java.sql.Date;
+import java.util.List;
 import java.util.Objects;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.tpibackend.mstransportes.entity.Ruta;
+import org.tpibackend.mstransportes.entity.Ubicacion;
 import org.tpibackend.mstransportes.repository.RutaRepository;
+import org.tpibackend.mstransportes.entity.Tramo;
+import org.tpibackend.mstransportes.service.TramoService;
 
 import jakarta.persistence.EntityNotFoundException;
+
 
 @Service
 public class RutaService {
     
+    @Value("${ms.contenedores.url}")
+    private String URL_MS_CONTENEDORES;
+
+
     private final RutaRepository rutaRepository;
 
-    public RutaService(RutaRepository rutaRepository) {
+    private final TramoService tramosService;
+
+    public RutaService(RutaRepository rutaRepository, TramoService tramosService) {
         this.rutaRepository = rutaRepository;
+        this.tramosService = tramosService;
     }
 
     public Ruta getRutaPorId(Integer id) {
@@ -36,5 +50,36 @@ public class RutaService {
         rutaRepository.deleteById(id);
     }
 
+    public Ruta getRutaPorSolicitudId(Integer solicitudId) {
+        Objects.requireNonNull(solicitudId, "la id de la solicitud no puede ser nula");
+        return rutaRepository.findByIdSolicitud(solicitudId)
+                .orElseThrow(() -> new EntityNotFoundException("Ruta no encontrada para la solicitud con id: " + solicitudId));
+    }
+
+    public Ruta crearRutaParaSolicitud(Integer solicitudId, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, Date fechaHoraInicio) {
+        Ruta ruta = new Ruta();
+        ruta.setIdSolicitud(solicitudId);
+        ruta.setCantidadTramos(-1);
+        ruta.setCantidadDepositos(-1);
+        ruta.setUbicacionInicial(ubicacionInicial);
+        ruta.setUbicacionFinal(ubicacionFinal);
+        ruta = persistirRuta(ruta);
+
+        calcularRuta(ruta, ubicacionInicial, ubicacionFinal, fechaHoraInicio);
+
+        return ruta;
+    }
+
+    public Ruta calcularRuta(Ruta ruta, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, Date fechaHoraInicio) {
+        List<Tramo> tramos = tramosService.calcularTramos(
+            ruta,
+            ubicacionInicial,
+            ubicacionFinal,
+            fechaHoraInicio
+        );
+
+
+        return ruta; // temporal
+    }
 
 }

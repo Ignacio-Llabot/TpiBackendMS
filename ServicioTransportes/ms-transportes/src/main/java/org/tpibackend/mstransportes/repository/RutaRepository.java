@@ -6,4 +6,5 @@ import org.tpibackend.mstransportes.entity.Ruta;
 
 @Repository
 public interface RutaRepository extends JpaRepository<Ruta, Integer> {
+    java.util.Optional<Ruta> findByIdSolicitud(Integer solicitudId);
 }

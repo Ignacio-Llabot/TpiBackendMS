@@ -27,8 +27,8 @@ public class SolicitudController {
     // Definimos endpoints
 
     @PostMapping
-    public Solicitud postSolicitud(@RequestBody Solicitud solicitud) {
-        return solicitudService.crearNuevaSolicitud(solicitud);
+    public Solicitud postSolicitud(@RequestBody String solicitudJson) {
+        return solicitudService.crearNuevaSolicitud(solicitudJson);
     }
 
     @PutMapping("{id}")

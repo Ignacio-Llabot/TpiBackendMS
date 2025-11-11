@@ -22,6 +22,14 @@ public class EstadoService {
         return estadoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Estado no encontrado con id: " + id));
     }
+
+    public Estado getEstadoPorNombre(String nombre) {
+        Objects.requireNonNull(nombre, "El nombre no puede ser nulo");
+        return estadoRepository.findAll().stream()
+                .filter(estado -> estado.getNombre().equalsIgnoreCase(nombre))
+                .findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Estado no encontrado con nombre: " + nombre));
+    }
     
 
 }
