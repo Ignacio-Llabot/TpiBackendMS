@@ -1,0 +1,64 @@
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: mi_base
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    ports:
+      - "5432:5432"
+    networks:
+      - mi_red_interna
+
+  ms-contenedores:
+    build: ./ServicioContenedores/ms-contenedores 
+    container_name: ms-contenedores
+    environment:
+      # --- ARREGLADO ---
+      # Ya no sobreescribimos la URL aquí.
+      # La aplicación leerá la URL correcta (la que apunta a 8081)
+      # desde su propio application.properties.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mi_base
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+    ports:
+      # El servicio corre en 8080 (interno), lo exponemos en 8081 (máquina)
+      - "8081:8080" 
+    networks:
+      - mi_red_interna
+    depends_on:
+      - postgres
+
+  ms-transportes:
+    build: ./ServicioTransportes/ms-transportes 
+    container_name: ms-transportes
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mi_base
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+    ports:
+      # --- ARREGLADO ---
+      # El servicio corre en 8081 (interno), lo exponemos en 8082 (máquina)
+      - "8082:8081" 
+    networks:
+      - mi_red_interna
+    depends_on:
+      - postgres
+
+  api-gateway:
+    build: ./apigateway 
+    container_name: api-gateway
+    ports:
+      # El servicio corre en 8080 (interno), lo exponemos en 8080 (máquina)
+      - "8080:8080" 
+    networks:
+      - mi_red_interna
+    depends_on:
+      - ms-contenedores
+      - ms-transportes
+
+networks:
+  mi_red_interna:
+    driver: bridge
