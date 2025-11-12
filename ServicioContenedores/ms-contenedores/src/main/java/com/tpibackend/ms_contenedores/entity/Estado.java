@@ -18,7 +18,6 @@ import lombok.NoArgsConstructor;
 public class Estado {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "idEstado", nullable = false)
     private Integer idEstado;
     

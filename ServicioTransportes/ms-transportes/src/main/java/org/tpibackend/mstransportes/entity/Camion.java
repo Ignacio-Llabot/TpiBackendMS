@@ -12,42 +12,30 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "\"Camiones\"")
+@Table(name = "Camiones")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class Camion {
 
     @Id
-    @Column(name = "\"patente\"", nullable = false)
+    @Column(name = "patente", nullable = false)
     private String patente;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "\"idTransportista\"")
+    @ManyToOne(fetch = FetchType.EAGER, optional = true)
+    @JoinColumn(name = "idTransportista")
     private Transportista transportista;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "\"idTipoCamion\"", nullable = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "idTipoCamion", nullable = false)
     private TipoCamion tipoCamion;
 
-    @Column(name = "\"telefono\"", nullable = false)
-    private String telefono;
-
-    @Column(name = "\"capacidadPeso\"", nullable = false)
+    @Column(name = "capacidadPeso", nullable = false)
     private Double capacidadPeso;
 
-    @Column(name = "\"capacidadVolumen\"", nullable = false)
+    @Column(name = "capacidadVolumen", nullable = false)
     private Double capacidadVolumen;
 
-    @Column(name = "\"disponibilidad\"", nullable = false)
+    @Column(name = "disponibilidad", nullable = false)
     private Boolean disponibilidad;
-
-    @Column(name = "\"costos\"", nullable = false)
-    private Double costos;
-
-    @Column(name = "\"costoBaseXKm\"", nullable = false)
-    private Double costoBaseXKm;
-
-    @Column(name = "\"consumoPromCombustible\"", nullable = false)
-    private Double consumoPromCombustible;
 }

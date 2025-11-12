@@ -14,20 +14,17 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "\"Ubicaciones\"")
+@Table(name = "Ubicaciones")
 public class Ubicacion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "\"idUbicacion\"")
+    @Column(name = "idUbicacion")
     private Integer idUbicacion;
 
-    @Column(name = "\"direccion\"", nullable = false)
-    private String direccion;
-
-    @Column(name = "\"latitud\"", nullable = false)
+    @Column(name = "latitud", nullable = false)
     private Double latitud;
 
-    @Column(name = "\"longitud\"", nullable = false)
+    @Column(name = "longitud", nullable = false)
     private Double longitud;
 }

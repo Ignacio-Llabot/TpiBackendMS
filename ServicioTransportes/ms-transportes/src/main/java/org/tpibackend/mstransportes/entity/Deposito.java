@@ -17,21 +17,18 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "\"Depositos\"")
+@Table(name = "Depositos")
 public class Deposito {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "\"idDeposito\"")
+    @Column(name = "idDeposito")
     private Integer idDeposito;
 
-    @Column(name = "\"nombre\"", nullable = false)
-    private String nombre;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "\"idUbicacion\"", nullable = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "idUbicacion", nullable = false)
     private Ubicacion ubicacion;
 
-    @Column(name = "\"costoEstadia\"", nullable = false)
+    @Column(name = "costoEstadia", nullable = false)
     private Double costoEstadia;
 }

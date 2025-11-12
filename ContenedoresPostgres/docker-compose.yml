@@ -2,17 +2,26 @@ version: "3.9"
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: mi_postgres
-    ports:
-      - "5432:5432"
     environment:
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1234
       POSTGRES_DB: mi_base
+      LANG: C
+    ports:
+      - "8085:5432"          # Host 8085 -> Contenedor 5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
     restart: unless-stopped
+    # (Opcional) Healthcheck para saber cuándo está listo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mi_base || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
 volumes:
   postgres_data:
-    external: true  # Usa el volumen que ya creaste
