@@ -122,12 +122,13 @@ public class SolicitudService {
             // Parsear las ubicaciones (ya están en formato JSON string)
             JsonNode ubicacionInicialJson = objectMapper.readTree(ubicacionInicial);
             JsonNode ubicacionFinalJson = objectMapper.readTree(ubicacionFinal);
+            JsonNode fechaHoraInicioJson = objectMapper.valueToTree(fechaHoraInicio);
             
             // Crear el objeto con la estructura que necesitas
             var requestBody = objectMapper.createObjectNode();
             requestBody.set("ubicacionInicial", ubicacionInicialJson);
             requestBody.set("ubicacionFinal", ubicacionFinalJson);
-            requestBody.put("fechaHoraInicio", fechaHoraInicio.getTime()); // Envía como timestamp en milisegundos
+            requestBody.set("fechaHoraInicio", fechaHoraInicioJson); // Enviar como Date
             
             // Hacer el POST
             restTemplate.postForObject(url, requestBody, String.class);

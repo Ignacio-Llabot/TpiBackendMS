@@ -7,6 +7,7 @@ import org.tpibackend.mstransportes.entity.Ubicacion;
 import org.tpibackend.mstransportes.service.RutaService;
 
 import java.sql.Date;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -50,14 +51,14 @@ public class RutaController {
                 Date fechaHoraInicio = objectMapper.treeToValue(fechaHoraInicioNode, Date.class);
                     
                 // Crear la ruta
-                Ruta ruta = rutaService.crearRutaParaSolicitud(
+                List<Ruta> rutas = rutaService.crearRutasParaSolicitud(
                     idSolicitud,
                     ubicacionInicial, 
                     ubicacionFinal,
                     fechaHoraInicio
                 );
                     
-                return ResponseEntity.ok(ruta);
+                return ; //ResponseEntity.ok(ruta);
                     
             } catch (Exception e) {
                 return ResponseEntity.badRequest().build();

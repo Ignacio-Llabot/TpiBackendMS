@@ -42,7 +42,6 @@ public class CamionController {
 
         // Actualiza
         miCamion.setCapacidadPeso(camion.getCapacidadPeso());
-        miCamion.setCostoBaseXKm(camion.getCostoBaseXKm());
         miCamion.setTipoCamion(
                 tipoCamionService.getTipoCamionPorId(camion.getTipoCamion().getIdTipoCamion()));
         miCamion.setTransportista(

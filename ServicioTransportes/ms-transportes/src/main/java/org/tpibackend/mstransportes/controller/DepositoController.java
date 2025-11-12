@@ -36,7 +36,6 @@ public class DepositoController {
         Deposito miDeposito = depositoService.getDepositoPorId(id);
 
         // Actualiza
-        miDeposito.setNombre(deposito.getNombre());
         miDeposito.setCostoEstadia(deposito.getCostoEstadia());
 
         if (deposito.getUbicacion() != null && deposito.getUbicacion().getIdUbicacion() != null) {

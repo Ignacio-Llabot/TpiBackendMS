@@ -45,7 +45,7 @@ public class SolicitudController {
 
         // miSolicitud.setEstado(solicitudNueva.getEstado());
 
-        Estado estado = estadoService.getEstadoPorId(solicitudNueva.getEstado().getIdEstado());
+        Estado estado = estadoService.getEstadoPorNombre(solicitudNueva.getEstado().getNombre());
 
         miSolicitud.setTiempoEstimado(solicitudNueva.getTiempoEstimado());
         miSolicitud.setTiempoReal(solicitudNueva.getTiempoReal());

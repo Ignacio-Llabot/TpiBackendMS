@@ -56,21 +56,20 @@ public class RutaService {
                 .orElseThrow(() -> new EntityNotFoundException("Ruta no encontrada para la solicitud con id: " + solicitudId));
     }
 
-    public Ruta crearRutaParaSolicitud(Integer solicitudId, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, Date fechaHoraInicio) {
+    public List<Ruta> crearRutasParaSolicitud(Integer solicitudId, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, Date fechaHoraInicio) {
         Ruta ruta = new Ruta();
         ruta.setIdSolicitud(solicitudId);
         ruta.setCantidadTramos(-1);
         ruta.setCantidadDepositos(-1);
         ruta.setUbicacionInicial(ubicacionInicial);
         ruta.setUbicacionFinal(ubicacionFinal);
-        ruta = persistirRuta(ruta);
 
-        calcularRuta(ruta, ubicacionInicial, ubicacionFinal, fechaHoraInicio);
+        calcularRutas(ruta, ubicacionInicial, ubicacionFinal, fechaHoraInicio);
 
-        return ruta;
+        return List.of(ruta);
     }
 
-    public Ruta calcularRuta(Ruta ruta, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, Date fechaHoraInicio) {
+    public Ruta calcularRutas(Ruta ruta, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, Date fechaHoraInicio) {
         List<Tramo> tramos = tramosService.calcularTramos(
             ruta,
             ubicacionInicial,
