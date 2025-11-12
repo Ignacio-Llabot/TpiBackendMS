@@ -5,8 +5,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.tpibackend.mstransportes.entity.Ruta;
 import org.tpibackend.mstransportes.entity.Ubicacion;
 import org.tpibackend.mstransportes.service.RutaService;
+import org.tpibackend.mstransportes.service.osrmstategies.*;
 
 import java.sql.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -29,41 +31,45 @@ public class RutaController {
         this.objectMapper = objectMapper;
     }
 
-    @PostMapping("/{idSolicitud}")
+    @PostMapping("/{idSolicitud}/{strategy:(?:urgente|menorcosto|optima)}")
     public ResponseEntity<Ruta> postRutaParaSolicitud(
             @PathVariable Integer idSolicitud,
+            @PathVariable String strategy,
             @RequestBody String ubicacionesJson
-        ) {
-        
-            try {
-                // Parsear el JSON
-                JsonNode rootNode = objectMapper.readTree(ubicacionesJson);
-                    
-                // Extraer ubicacionInicial
-                JsonNode inicialNode = rootNode.path("ubicacionInicial");
-                Ubicacion ubicacionInicial = objectMapper.treeToValue(inicialNode, Ubicacion.class);
-                    
-                // Extraer ubicacionFinal
-                JsonNode finalNode = rootNode.path("ubicacionFinal");
-                Ubicacion ubicacionFinal = objectMapper.treeToValue(finalNode, Ubicacion.class);
+    ) {
 
-                JsonNode fechaHoraInicioNode = rootNode.path("fechaHoraInicio");
-                Date fechaHoraInicio = objectMapper.treeToValue(fechaHoraInicioNode, Date.class);
-                    
-                // Crear la ruta
-                List<Ruta> rutas = rutaService.crearRutasParaSolicitud(
+        Strategy estrategia;
+
+        if (strategy.equals("urgente")) {
+            estrategia = new UrgenteStrategy();
+        } else if (strategy.equals("menorcosto")) {
+            estrategia = new MenorCostoStrategy();
+        } else if (strategy.equals("optima")) {
+            estrategia = new OptimaStrategy();
+        } else {
+            return ResponseEntity.badRequest().build();
+        }
+
+        rutaService.setStrategyOsrmService(estrategia);
+        try {
+            JsonNode rootNode = objectMapper.readTree(ubicacionesJson);
+
+            Ubicacion ubicacionInicial = objectMapper.treeToValue(rootNode.path("ubicacionInicial"), Ubicacion.class);
+            Ubicacion ubicacionFinal = objectMapper.treeToValue(rootNode.path("ubicacionFinal"), Ubicacion.class);
+            LocalDateTime fechaHoraInicio = objectMapper.treeToValue(rootNode.path("fechaHoraInicio"), LocalDateTime.class);
+
+            Ruta ruta = rutaService.crearRutasParaSolicitud(
                     idSolicitud,
-                    ubicacionInicial, 
+                    ubicacionInicial,
                     ubicacionFinal,
                     fechaHoraInicio
-                );
-                    
-                return ; //ResponseEntity.ok(ruta);
-                    
-            } catch (Exception e) {
-                return ResponseEntity.badRequest().build();
-            }
+            );
+
+            return ResponseEntity.ok(ruta);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
         }
+    }
             
     
     

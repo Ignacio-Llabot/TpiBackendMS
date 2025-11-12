@@ -22,5 +22,11 @@ public class TipoTramoService {
         return tipoTramoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("TipoTramo no encontrado con id: " + id));
     }
+
+    public TipoTramo getTipoTramoPorNombre(String nombre) {
+        Objects.requireNonNull(nombre, "el nombre no puede ser nulo");
+        return tipoTramoRepository.findByNombre(nombre)
+                .orElseThrow(() -> new EntityNotFoundException("TipoTramo no encontrado con nombre: " + nombre));
+    }
     
 }

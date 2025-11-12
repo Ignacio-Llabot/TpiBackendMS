@@ -1,15 +1,23 @@
 package org.tpibackend.mstransportes.service;
 
-import java.sql.Date;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 import org.tpibackend.mstransportes.dto.TramoDTO;
+import org.tpibackend.mstransportes.entity.Deposito;
+import org.tpibackend.mstransportes.entity.Estado;
 import org.tpibackend.mstransportes.entity.Ruta;
+import org.tpibackend.mstransportes.entity.TipoTramo;
 import org.tpibackend.mstransportes.entity.Tramo;
 import org.tpibackend.mstransportes.entity.Ubicacion;
 import org.tpibackend.mstransportes.repository.TramoRepository;
+import org.tpibackend.mstransportes.service.osrmstategies.Strategy;
+import org.tpibackend.mstransportes.service.osrmstategies.UrgenteStrategy;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -20,9 +28,24 @@ public class TramoService {
 
     private final OsrmService osrmService;
 
-    public TramoService(TramoRepository tramoRepository, OsrmService osrmService) {
+    private final EstadoService estadoService;
+
+    private final TipoTramoService tipoTramoService;
+
+    private final DepositoService depositoService;
+
+    public TramoService(
+        TramoRepository tramoRepository,
+        OsrmService osrmService,
+        EstadoService estadoService,
+        TipoTramoService tipoTramoService,
+        DepositoService depositoService
+    ) {
         this.tramoRepository = tramoRepository;
         this.osrmService = osrmService;
+        this.estadoService = estadoService;
+        this.tipoTramoService = tipoTramoService;
+        this.depositoService = depositoService;
     }
 
     public Tramo getTramoPorId(Integer tramoId) {
@@ -53,38 +76,104 @@ public class TramoService {
         Ruta ruta,
         Ubicacion ubicacionInicio,
         Ubicacion ubicacionFin,
-        Date fechaHoraInicio
+        LocalDateTime fechaHoraInicio
     ) {
 
-        List<TramoDTO> tramoDTOs = osrmService.calcularRutaConDepositos(
+
+        List<TramoDTO> tramoDTOs = osrmService.calcularTramosDTO(
             ubicacionInicio,
             ubicacionFin
         );
 
-        // TODO procesamiento de tramoDTO a tramo
+        if (tramoDTOs.isEmpty()) {
+            return List.of();
+        }
 
-        // acá seguro tenga que agregar un acumulador pero en fecha para ir viendo la fecha hora inicio y la fechaHoraFinEstimada
-        // TODO sacar notNull de patenteCamion en la BD y en la entidad!!!!
+        Strategy estrategiaActual = osrmService.getStrategy();
+        boolean esRutaDirecta = estrategiaActual instanceof UrgenteStrategy;
 
+        Estado estadoPendiente = estadoService.getEstadoPorNombre("pendiente");
 
-        List<Tramo> tramos = tramoDTOs.stream().map(dto -> {
+        Map<Integer, Deposito> depositosPorUbicacion = construirIndiceDepositos();
+
+        List<Tramo> tramos = new ArrayList<>();
+        LocalDateTime inicioTramo = fechaHoraInicio;
+
+        for (int i = 0; i < tramoDTOs.size(); i++) {
+            TramoDTO dto = tramoDTOs.get(i);
+
             Tramo tramo = new Tramo();
             tramo.setRuta(ruta);
             tramo.setUbicacionOrigen(dto.getUbicacionOrigen());
             tramo.setUbicacionDestino(dto.getUbicacionDestino());
             tramo.setDistancia(dto.getDistancia());
+            tramo.setEstado(estadoPendiente);
 
-            // ver como asignar tipoTramo
-            // ver como asignar estado
-            // ver como asignar costoAproximado ( not nullable btw )
+            tramo.setTipoTramo(resolverTipoTramo(i, tramoDTOs.size(), esRutaDirecta));
 
-            // completar mapeo de dto a entidad tramo
-            return tramo;
-        }).toList();
+            tramo.setFechaHoraInicioEstimada(inicioTramo);
 
-        // acá persistir los tramos antes de devolverlos
-        guardarTramos(tramos);
+            long duracionSegundos = dto.getDuracionEstimada() != null
+                ? Math.round(dto.getDuracionEstimada())
+                : 0L;
+            LocalDateTime finTramo = inicioTramo.plusSeconds(duracionSegundos);
+            tramo.setFechaHoraFinEstimada(finTramo);
+
+            Deposito depositoDestino = obtenerDepositoPorUbicacion(dto.getUbicacionDestino(), depositosPorUbicacion);
+            if (depositoDestino != null) {
+                tramo.setCostoAproximado(depositoDestino.getCostoEstadia());
+            } else {
+                tramo.setCostoAproximado(0.0);
+            }
+
+            tramos.add(tramo);
+
+            boolean haySiguienteTramo = i < tramoDTOs.size() - 1;
+            inicioTramo = finTramo;
+            if (haySiguienteTramo && !esRutaDirecta && depositoDestino != null) {
+                inicioTramo = inicioTramo.plusDays(1);
+            }
+        }
 
         return tramos;
+    }
+
+    public void setStrategyOsrmService(Strategy strategy) {
+        osrmService.setStrategy(strategy);
+    }
+
+    private Map<Integer, Deposito> construirIndiceDepositos() {
+        List<Deposito> depositos = depositoService.getDepositos();
+        Map<Integer, Deposito> indice = new HashMap<>();
+        for (Deposito deposito : depositos) {
+            if (deposito == null || deposito.getUbicacion() == null) {
+                continue;
+            }
+            Integer idUbicacion = deposito.getUbicacion().getIdUbicacion();
+            if (idUbicacion != null) {
+                indice.putIfAbsent(idUbicacion, deposito);
+            }
+        }
+        return indice;
+    }
+
+    private Deposito obtenerDepositoPorUbicacion(Ubicacion ubicacion, Map<Integer, Deposito> depositosPorUbicacion) {
+        if (ubicacion == null || ubicacion.getIdUbicacion() == null) {
+            return null;
+        }
+        return depositosPorUbicacion.get(ubicacion.getIdUbicacion());
+    }
+
+    private TipoTramo resolverTipoTramo(int indice, int total, boolean esRutaDirecta) {
+        if (esRutaDirecta) {
+            return tipoTramoService.getTipoTramoPorNombre("origen-origen");
+        }
+        if (indice == 0) {
+            return tipoTramoService.getTipoTramoPorNombre("origen-deposito");
+        }
+        if (indice == total - 1) {
+            return tipoTramoService.getTipoTramoPorNombre("deposito-destino");
+        }
+        return tipoTramoService.getTipoTramoPorNombre("deposito-deposito");
     }
 }

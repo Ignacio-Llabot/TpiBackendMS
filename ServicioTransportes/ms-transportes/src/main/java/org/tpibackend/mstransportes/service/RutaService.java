@@ -1,6 +1,7 @@
 package org.tpibackend.mstransportes.service;
 
 import java.sql.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
@@ -11,6 +12,7 @@ import org.tpibackend.mstransportes.entity.Ubicacion;
 import org.tpibackend.mstransportes.repository.RutaRepository;
 import org.tpibackend.mstransportes.entity.Tramo;
 import org.tpibackend.mstransportes.service.TramoService;
+import org.tpibackend.mstransportes.service.osrmstategies.Strategy;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -56,7 +58,7 @@ public class RutaService {
                 .orElseThrow(() -> new EntityNotFoundException("Ruta no encontrada para la solicitud con id: " + solicitudId));
     }
 
-    public List<Ruta> crearRutasParaSolicitud(Integer solicitudId, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, Date fechaHoraInicio) {
+    public Ruta crearRutasParaSolicitud(Integer solicitudId, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, LocalDateTime fechaHoraInicio) {
         Ruta ruta = new Ruta();
         ruta.setIdSolicitud(solicitudId);
         ruta.setCantidadTramos(-1);
@@ -64,12 +66,12 @@ public class RutaService {
         ruta.setUbicacionInicial(ubicacionInicial);
         ruta.setUbicacionFinal(ubicacionFinal);
 
-        calcularRutas(ruta, ubicacionInicial, ubicacionFinal, fechaHoraInicio);
+        calcularRuta(ruta, ubicacionInicial, ubicacionFinal, fechaHoraInicio);
 
-        return List.of(ruta);
+        return ruta;
     }
 
-    public Ruta calcularRutas(Ruta ruta, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, Date fechaHoraInicio) {
+    public Ruta calcularRuta(Ruta ruta, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, LocalDateTime fechaHoraInicio) {
         List<Tramo> tramos = tramosService.calcularTramos(
             ruta,
             ubicacionInicial,
@@ -77,8 +79,14 @@ public class RutaService {
             fechaHoraInicio
         );
 
+        tramosService.guardarTramos(tramos);
 
-        return ruta; // temporal
+
+        return persistirRuta(ruta); 
+    }
+
+    public void setStrategyOsrmService(Strategy strategy) {
+        tramosService.setStrategyOsrmService(strategy);
     }
 
 }
