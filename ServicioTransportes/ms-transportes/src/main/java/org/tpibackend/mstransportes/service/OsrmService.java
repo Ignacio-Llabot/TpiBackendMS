@@ -35,9 +35,10 @@ public class OsrmService {
         this.depositoService = depositoService;
     }
     
-    private final String osrmUrl = "http://localhost:5000";
-
-    private List<Deposito> depositos = depositoService.getDepositos();
+    // Usamos 'host.docker.internal' para que el contenedor pueda comunicarse
+    // con un servicio (OSRM) que corre en la máquina anfitriona (tu PC).
+    // 'localhost' dentro de un contenedor se refiere al propio contenedor.
+    private final String osrmUrl = "http://host.docker.internal:5000";
 
     public List<TramoDTO> calcularTramosDTO(
         Ubicacion origen,

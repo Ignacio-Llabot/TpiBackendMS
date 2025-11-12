@@ -16,15 +16,10 @@ services:
     build: ./ServicioContenedores/ms-contenedores 
     container_name: ms-contenedores
     environment:
-      # --- ARREGLADO ---
-      # Ya no sobreescribimos la URL aquí.
-      # La aplicación leerá la URL correcta (la que apunta a 8081)
-      # desde su propio application.properties.
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mi_base
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 1234
     ports:
-      # El servicio corre en 8080 (interno), lo exponemos en 8081 (máquina)
       - "8081:8080" 
     networks:
       - mi_red_interna
@@ -39,8 +34,6 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 1234
     ports:
-      # --- ARREGLADO ---
-      # El servicio corre en 8081 (interno), lo exponemos en 8082 (máquina)
       - "8082:8081" 
     networks:
       - mi_red_interna
@@ -51,13 +44,49 @@ services:
     build: ./apigateway 
     container_name: api-gateway
     ports:
-      # El servicio corre en 8080 (interno), lo exponemos en 8080 (máquina)
       - "8080:8080" 
+    environment:
+      # --- ELIMINADO ---
+      # Quitamos la variable de entorno de issuer-uri.
+      # La configuración se hará en application.properties.
+      # SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:9090/realms/tpi-realm
+      
+      # --- AGREGADO (Opcional pero recomendado) ---
+      # Pasamos las URLs de los microservicios como variables
+      # para que coincidan con tu GatewayConfig.java
+      APP_MICROSERVICIOS_URL_CONTENEDORES: http://ms-contenedores:8080
+      APP_MICROSERVICIOS_URL_TRANSPORTES: http://ms-transportes:8081
+      APP_MICROSERVICIOS_URL_TARIFAS: http://ms-tarifas:8080 # Asumiendo que existe
     networks:
       - mi_red_interna
     depends_on:
       - ms-contenedores
       - ms-transportes
+  
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      
+      # --- CAMBIO CLAVE ---
+      # Le decimos a Keycloak que su URL pública absoluta es esta.
+      # Esto es lo que pondrá en el "iss" (issuer) del token.
+      KC_HOSTNAME_URL: http://localhost:9090
+      
+      # Ya no necesitamos los otros KC_HOSTNAME*
+      # KC_HOSTNAME: localhost
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HTTP_ENABLED: true
+    ports:
+      - "9090:8080"
+    networks:
+      - mi_red_interna
+    command: start-dev
+    volumes:
+      - ./keycloak-data:/opt/keycloak/data
 
 networks:
   mi_red_interna:

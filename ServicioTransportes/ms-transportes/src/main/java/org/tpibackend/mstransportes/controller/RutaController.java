@@ -63,11 +63,13 @@ public class RutaController {
                     ubicacionInicial,
                     ubicacionFinal,
                     fechaHoraInicio
-            );
-
-            return ResponseEntity.ok(ruta);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+                );
+                    
+                return null; //ResponseEntity.ok(ruta);
+                    
+            } catch (Exception e) {
+                return ResponseEntity.badRequest().build();
+            }
         }
     }
             

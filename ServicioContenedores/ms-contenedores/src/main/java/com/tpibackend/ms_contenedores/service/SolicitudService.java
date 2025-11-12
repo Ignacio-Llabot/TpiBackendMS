@@ -99,6 +99,11 @@ public class SolicitudService {
             throw new RuntimeException("Error al parsear el JSON de la solicitud", e);
         }
 
+        // --- CORRECCIÓN ---
+        // Asignar un estado inicial al contenedor antes de persistirlo.
+        Estado estadoContenedor = estadoService.getEstadoPorNombre("disponible"); // O el estado inicial que corresponda
+        solicitud.getContenedor().setEstado(estadoContenedor);
+
         // Creo el contenedor
         Contenedor contenedor = contenedorService.persistirContenedor(solicitud.getContenedor());
         solicitud.setContenedor(contenedor);
