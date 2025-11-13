@@ -17,6 +17,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class OptimaStrategy implements Strategy {
 
+    private static final double MAX_TRAMO_METROS = 750_000d;
+
     @Override
     public List<TramoDTO> calcularRuta(
         Ubicacion origen,
@@ -148,6 +150,9 @@ public class OptimaStrategy implements Strategy {
 
             for (int vecino = 0; vecino < n; vecino++) {
                 double peso = distancias[indiceActual][vecino];
+                if (peso > MAX_TRAMO_METROS) {
+                    continue;
+                }
                 if (Double.isInfinite(peso) || Double.isNaN(peso)) {
                     continue;
                 }
@@ -185,7 +190,7 @@ public class OptimaStrategy implements Strategy {
 
             double distancia = tabla.distancias[origen][destino];
             double duracion = tabla.duraciones[origen][destino];
-            if (Double.isInfinite(distancia) || Double.isNaN(distancia)) {
+            if (Double.isInfinite(distancia) || Double.isNaN(distancia) || distancia > MAX_TRAMO_METROS) {
                 throw new IllegalStateException("Segmento invalido en la ruta calculada");
             }
 
