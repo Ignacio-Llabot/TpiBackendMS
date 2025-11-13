@@ -14,11 +14,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "Estados")
+@Table(name = "\"Estados\"")
 public class Estado {
 
 	@Id
-	@Column(name = "idEstado", nullable = false)
+	@Column(name = "\"idEstado\"", nullable = false)
 	private Integer idEstado;
 
 	@Column(name = "nombre", nullable = false)

@@ -35,7 +35,8 @@ public class ClienteService {
 
     public Cliente findOrCreateCliente(Cliente cliente) {
         Objects.requireNonNull(cliente, "el cliente no puede ser nulo");
-        return clienteRepository.findById(cliente.getDni())
+        final String dni = Objects.requireNonNull(cliente.getDni(), "el DNI del cliente no puede ser nulo");
+        return clienteRepository.findById(dni)
             .orElseGet(() -> clienteRepository.save(cliente));
         
         // Metodo que voy a necesitar para el req 1.2, si no existe el cliente lo crea, si no, lo devuelve.

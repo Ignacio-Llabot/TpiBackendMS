@@ -1,14 +1,26 @@
 services:
 
   postgres:
-    image: postgres:15-alpine
-    container_name: postgres
+    image: postgres:18-alpine
+    container_name: mi_postgres
     environment:
-      POSTGRES_DB: mi_base
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: mi_base
+      LANG: C
     ports:
-      - "5432:5432"
+      - "8085:5432"          # Host 8085 -> Contenedor 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./ContenedoresPostgres/init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    # (Opcional) Healthcheck para saber cuándo está listo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mi_base || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       - mi_red_interna
 
@@ -88,6 +100,22 @@ services:
     volumes:
       - ./keycloak-data:/opt/keycloak/data
 
+  osrm:
+    image: osrm/osrm-backend:latest
+    platform: linux/amd64
+    container_name: osrm
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./OsmrService/osrm-data:/data
+    command: >
+      osrm-routed --algorithm mld /data/argentina-251109.osrm
+    networks:
+      - mi_red_interna
+
 networks:
   mi_red_interna:
     driver: bridge
+
+volumes:
+  postgres_data:

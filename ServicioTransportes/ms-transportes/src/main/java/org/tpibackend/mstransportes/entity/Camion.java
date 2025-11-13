@@ -12,7 +12,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "Camiones")
+@Table(name = "\"Camiones\"")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -23,17 +23,17 @@ public class Camion {
     private String patente;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = true)
-    @JoinColumn(name = "idTransportista")
+    @JoinColumn(name = "\"idTransportista\"")
     private Transportista transportista;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "idTipoCamion", nullable = false)
+    @JoinColumn(name = "\"idTipoCamion\"", nullable = false)
     private TipoCamion tipoCamion;
 
-    @Column(name = "capacidadPeso", nullable = false)
+    @Column(name = "\"capacidadPeso\"", nullable = false)
     private Double capacidadPeso;
 
-    @Column(name = "capacidadVolumen", nullable = false)
+    @Column(name = "\"capacidadVolumen\"", nullable = false)
     private Double capacidadVolumen;
 
     @Column(name = "disponibilidad", nullable = false)

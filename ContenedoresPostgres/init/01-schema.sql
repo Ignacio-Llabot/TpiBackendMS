@@ -45,9 +45,9 @@ create table "Solicitudes"
     "idContenedor"   integer not null,
     "dniCliente"     text    not null,
     "costoEstimado"  double precision,
-    "tiempoEstimado" interval,
+    "tiempoEstimado" double precision,
     "costoFinal"     double precision,
-    "tiempoReal"     interval,
+    "tiempoReal"     double precision,
     "idEstado"       integer not null,
     constraint "PK_idSolicitud"
         primary key ("idSolicitud"),

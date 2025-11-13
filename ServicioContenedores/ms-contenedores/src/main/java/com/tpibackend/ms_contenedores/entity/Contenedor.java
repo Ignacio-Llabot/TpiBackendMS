@@ -13,7 +13,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "Contenedores")
+@Table(name = "\"Contenedores\"")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,7 +21,7 @@ public class Contenedor {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idContenedor", nullable = false)
+    @Column(name = "\"idContenedor\"", nullable = false)
     private Integer idContenedor;
     
     @Column(name = "peso", nullable = false)
@@ -31,6 +31,6 @@ public class Contenedor {
     private Double volumen;
     
     @ManyToOne
-    @JoinColumn(name = "idEstado", nullable = false)
+    @JoinColumn(name = "\"idEstado\"", nullable = false)
     private Estado estado;
 }

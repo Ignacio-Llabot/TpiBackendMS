@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.tpibackend.mstransportes.dto.TramoDTO;
@@ -16,6 +17,7 @@ import org.tpibackend.mstransportes.entity.TipoTramo;
 import org.tpibackend.mstransportes.entity.Tramo;
 import org.tpibackend.mstransportes.entity.Ubicacion;
 import org.tpibackend.mstransportes.repository.TramoRepository;
+import org.tpibackend.mstransportes.repository.UbicacionRepository;
 import org.tpibackend.mstransportes.service.osrmstategies.Strategy;
 import org.tpibackend.mstransportes.service.osrmstategies.UrgenteStrategy;
 
@@ -34,18 +36,22 @@ public class TramoService {
 
     private final DepositoService depositoService;
 
+    private final UbicacionRepository ubicacionRepository;
+
     public TramoService(
         TramoRepository tramoRepository,
         OsrmService osrmService,
         EstadoService estadoService,
         TipoTramoService tipoTramoService,
-        DepositoService depositoService
+        DepositoService depositoService,
+        UbicacionRepository ubicacionRepository
     ) {
         this.tramoRepository = tramoRepository;
         this.osrmService = osrmService;
         this.estadoService = estadoService;
         this.tipoTramoService = tipoTramoService;
         this.depositoService = depositoService;
+        this.ubicacionRepository = ubicacionRepository;
     }
 
     public Tramo getTramoPorId(Integer tramoId) {
@@ -79,12 +85,23 @@ public class TramoService {
         LocalDateTime fechaHoraInicio
     ) {
 
+        System.out.println("4"); // TODO eliminar
+        List<Deposito> depositos = depositoService.getDepositos();
+        System.out.println("5"); // TODO eliminar
+        Ubicacion origenPersistido = asegurarUbicacion(ubicacionInicio);
+        Ubicacion destinoPersistido = asegurarUbicacion(ubicacionFin);
+
+        ruta.setUbicacionInicial(origenPersistido);
+        ruta.setUbicacionFinal(destinoPersistido);
+
+        List<Deposito> depositosDisponibles = depositoService.getDepositos();
 
         List<TramoDTO> tramoDTOs = osrmService.calcularTramosDTO(
-            ubicacionInicio,
-            ubicacionFin
+            origenPersistido,
+            destinoPersistido,
+            depositosDisponibles
         );
-
+        System.out.println("7"); // TODO eliminar
         if (tramoDTOs.isEmpty()) {
             return List.of();
         }
@@ -94,7 +111,7 @@ public class TramoService {
 
         Estado estadoPendiente = estadoService.getEstadoPorNombre("pendiente");
 
-        Map<Integer, Deposito> depositosPorUbicacion = construirIndiceDepositos();
+        Map<Integer, Deposito> depositosPorUbicacion = construirIndiceDepositos(depositosDisponibles);
 
         List<Tramo> tramos = new ArrayList<>();
         LocalDateTime inicioTramo = fechaHoraInicio;
@@ -104,8 +121,11 @@ public class TramoService {
 
             Tramo tramo = new Tramo();
             tramo.setRuta(ruta);
-            tramo.setUbicacionOrigen(dto.getUbicacionOrigen());
-            tramo.setUbicacionDestino(dto.getUbicacionDestino());
+            Ubicacion ubicacionOrigenPersistida = asegurarUbicacion(dto.getUbicacionOrigen());
+            Ubicacion ubicacionDestinoPersistida = asegurarUbicacion(dto.getUbicacionDestino());
+
+            tramo.setUbicacionOrigen(ubicacionOrigenPersistida);
+            tramo.setUbicacionDestino(ubicacionDestinoPersistida);
             tramo.setDistancia(dto.getDistancia());
             tramo.setEstado(estadoPendiente);
 
@@ -119,7 +139,7 @@ public class TramoService {
             LocalDateTime finTramo = inicioTramo.plusSeconds(duracionSegundos);
             tramo.setFechaHoraFinEstimada(finTramo);
 
-            Deposito depositoDestino = obtenerDepositoPorUbicacion(dto.getUbicacionDestino(), depositosPorUbicacion);
+            Deposito depositoDestino = obtenerDepositoPorUbicacion(ubicacionDestinoPersistida, depositosPorUbicacion);
             if (depositoDestino != null) {
                 tramo.setCostoAproximado(depositoDestino.getCostoEstadia());
             } else {
@@ -142,8 +162,7 @@ public class TramoService {
         osrmService.setStrategy(strategy);
     }
 
-    private Map<Integer, Deposito> construirIndiceDepositos() {
-        List<Deposito> depositos = depositoService.getDepositos();
+    private Map<Integer, Deposito> construirIndiceDepositos(List<Deposito> depositos) {
         Map<Integer, Deposito> indice = new HashMap<>();
         for (Deposito deposito : depositos) {
             if (deposito == null || deposito.getUbicacion() == null) {
@@ -175,5 +194,25 @@ public class TramoService {
             return tipoTramoService.getTipoTramoPorNombre("deposito-destino");
         }
         return tipoTramoService.getTipoTramoPorNombre("deposito-deposito");
+    }
+
+    private Ubicacion asegurarUbicacion(Ubicacion ubicacion) {
+        Objects.requireNonNull(ubicacion, "la ubicacion no puede ser nula");
+
+        if (ubicacion.getIdUbicacion() != null) {
+            return ubicacionRepository.findById(ubicacion.getIdUbicacion())
+                .orElseThrow(() -> new EntityNotFoundException("Ubicacion no encontrada con id: " + ubicacion.getIdUbicacion()));
+        }
+
+        if (ubicacion.getLatitud() == null || ubicacion.getLongitud() == null) {
+            throw new IllegalArgumentException("La ubicacion debe tener latitud y longitud definidas");
+        }
+
+        Optional<Ubicacion> existente = ubicacionRepository.findByLatitudAndLongitud(
+            ubicacion.getLatitud(),
+            ubicacion.getLongitud()
+        );
+
+        return existente.orElseGet(() -> ubicacionRepository.save(ubicacion));
     }
 }

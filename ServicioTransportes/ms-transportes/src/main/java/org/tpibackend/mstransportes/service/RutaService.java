@@ -66,12 +66,16 @@ public class RutaService {
         ruta.setUbicacionInicial(ubicacionInicial);
         ruta.setUbicacionFinal(ubicacionFinal);
 
+        System.out.println("2"); // TODO eliminar
+
         calcularRuta(ruta, ubicacionInicial, ubicacionFinal, fechaHoraInicio);
 
         return ruta;
     }
 
     public Ruta calcularRuta(Ruta ruta, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, LocalDateTime fechaHoraInicio) {
+        System.out.println("3"); // TODO eliminar
+
         List<Tramo> tramos = tramosService.calcularTramos(
             ruta,
             ubicacionInicial,
@@ -79,9 +83,14 @@ public class RutaService {
             fechaHoraInicio
         );
 
+        if (ruta.getIdRuta() == null) {
+            ruta = persistirRuta(ruta);
+        }
+
+
         tramosService.guardarTramos(tramos);
-
-
+        ruta.setCantidadTramos(tramos.size());
+        ruta.setCantidadDepositos(tramos.size() - 1);
         return persistirRuta(ruta); 
     }
 

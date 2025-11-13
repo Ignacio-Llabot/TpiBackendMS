@@ -56,7 +56,14 @@ public class RutaController {
 
             Ubicacion ubicacionInicial = objectMapper.treeToValue(rootNode.path("ubicacionInicial"), Ubicacion.class);
             Ubicacion ubicacionFinal = objectMapper.treeToValue(rootNode.path("ubicacionFinal"), Ubicacion.class);
-            LocalDateTime fechaHoraInicio = objectMapper.treeToValue(rootNode.path("fechaHoraInicio"), LocalDateTime.class);
+
+            JsonNode fechaHoraNode = rootNode.path("fechaHoraInicio");
+            if (fechaHoraNode.isMissingNode() || fechaHoraNode.isNull()) {
+                return ResponseEntity.badRequest().build();
+            }
+            LocalDateTime fechaHoraInicio = LocalDateTime.parse(fechaHoraNode.asText());
+
+            System.out.println("1"); // TODO eliminar
 
             Ruta ruta = rutaService.crearRutasParaSolicitud(
                     idSolicitud,
@@ -65,14 +72,12 @@ public class RutaController {
                     fechaHoraInicio
                 );
                     
-                return null; //ResponseEntity.ok(ruta);
+                return ResponseEntity.ok(ruta);
                     
             } catch (Exception e) {
-                return ResponseEntity.badRequest().build();
+                e.printStackTrace();
+                return ResponseEntity.badRequest().build(); // error acá
             }
         }
     }
-            
-    
-    
-}
+

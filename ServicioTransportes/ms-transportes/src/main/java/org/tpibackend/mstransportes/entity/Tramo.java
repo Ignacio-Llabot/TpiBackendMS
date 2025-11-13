@@ -15,7 +15,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "Tramos")
+@Table(name = "\"Tramos\"")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -23,51 +23,51 @@ public class Tramo {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "idTramo", nullable = false)
+    @Column(name = "\"idTramo\"", nullable = false)
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "idRuta", nullable = false)
+    @JoinColumn(name = "\"idRuta\"", nullable = false)
     private Ruta ruta;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "idUbicacionOrigen", nullable = false)
+    @JoinColumn(name = "\"idUbicacionOrigen\"", nullable = false)
     private Ubicacion ubicacionOrigen;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "idUbicacionDestino", nullable = false)
+    @JoinColumn(name = "\"idUbicacionDestino\"", nullable = false)
     private Ubicacion ubicacionDestino;
 
     @Column(name = "distancia", nullable = false)
     private Double distancia;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "idTipoTramo", nullable = false)
+    @JoinColumn(name = "\"idTipoTramo\"", nullable = false)
     private TipoTramo tipoTramo;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
-    @JoinColumn(name = "idEstado", nullable = false)
+    @JoinColumn(name = "\"idEstado\"", nullable = false)
     private Estado estado;
 
-    @Column(name = "costoAproximado")
+    @Column(name = "\"costoAproximado\"")
     private Double costoAproximado;
 
-    @Column(name = "costoReal")
+    @Column(name = "\"costoReal\"")
     private Double costoReal;
 
-    @Column(name = "fechaHoraInicioEstimada")
+    @Column(name = "\"fechaHoraInicioEstimada\"")
     private LocalDateTime fechaHoraInicioEstimada;
 
-    @Column(name = "fechaHoraFinEstimada")
+    @Column(name = "\"fechaHoraFinEstimada\"")
     private LocalDateTime fechaHoraFinEstimada;
 
-    @Column(name = "fechaHoraInicio")
+    @Column(name = "\"fechaHoraInicio\"")
     private LocalDateTime fechaHoraInicio;
 
-    @Column(name = "fechaHoraFin")
+    @Column(name = "\"fechaHoraFin\"")
     private LocalDateTime fechaHoraFin;
 
     @ManyToOne(fetch = FetchType.EAGER, optional = true)
-    @JoinColumn(name = "patenteCamion", nullable = true)
+    @JoinColumn(name = "\"patenteCamion\"", nullable = true)
     private Camion camion;
 }
