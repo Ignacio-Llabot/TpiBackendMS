@@ -11,6 +11,7 @@ import java.sql.Date;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -63,8 +64,6 @@ public class RutaController {
             }
             LocalDateTime fechaHoraInicio = LocalDateTime.parse(fechaHoraNode.asText());
 
-            System.out.println("1"); // TODO eliminar
-
             Ruta ruta = rutaService.crearRutasParaSolicitud(
                     idSolicitud,
                     ubicacionInicial,
@@ -72,11 +71,11 @@ public class RutaController {
                     fechaHoraInicio
                 );
                     
-                return ResponseEntity.ok(ruta);
+                return ResponseEntity.status(HttpStatus.CREATED).body(ruta); // 201 Created
                     
             } catch (Exception e) {
                 e.printStackTrace();
-                return ResponseEntity.badRequest().build(); // error acá
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // error acá
             }
         }
     }

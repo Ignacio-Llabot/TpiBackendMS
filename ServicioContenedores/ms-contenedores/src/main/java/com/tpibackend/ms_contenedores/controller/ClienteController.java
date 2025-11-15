@@ -2,6 +2,9 @@ package com.tpibackend.ms_contenedores.controller;
 
 import com.tpibackend.ms_contenedores.entity.Cliente;
 import com.tpibackend.ms_contenedores.service.ClienteService;
+
+import jakarta.persistence.EntityNotFoundException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +23,12 @@ public class ClienteController {
 
     @GetMapping("/{dni}")
     public ResponseEntity<Cliente> getClientePorDni(@PathVariable String dni) {
-        Cliente cliente = clienteService.getClientePorDni(dni);
-        return ResponseEntity.ok(cliente); // 200 OK
+        try {
+            Cliente cliente = clienteService.getClientePorDni(dni);
+            return ResponseEntity.ok(cliente); // 200 OK
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping

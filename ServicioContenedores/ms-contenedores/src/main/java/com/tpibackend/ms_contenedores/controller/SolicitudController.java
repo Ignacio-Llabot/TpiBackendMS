@@ -2,6 +2,9 @@ package com.tpibackend.ms_contenedores.controller;
 
 import com.tpibackend.ms_contenedores.entity.Solicitud;
 import com.tpibackend.ms_contenedores.service.SolicitudService;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,12 +24,13 @@ public class SolicitudController {
     // Definimos endpoints
 
     @PostMapping
-    public Solicitud postSolicitud(@RequestBody Solicitud solicitud) {
-        return solicitudService.crearNuevaSolicitud(solicitud);
+    public ResponseEntity<Solicitud> postSolicitud(@RequestBody Solicitud solicitud) {
+        solicitud = solicitudService.crearNuevaSolicitud(solicitud);
+        return ResponseEntity.status(HttpStatus.CREATED).body(solicitud);
     }
 
     @PutMapping("{id}")
-    public Solicitud modificarSolicitud(@PathVariable Integer id, @RequestBody Solicitud solicitudNueva) {
+    public ResponseEntity<Solicitud> modificarSolicitud(@PathVariable Integer id, @RequestBody Solicitud solicitudNueva) {
 
         // Obtiene
         Solicitud miSolicitud = solicitudService.getSolicitudPorId(id);
@@ -42,8 +46,8 @@ public class SolicitudController {
 
 
         // Guarda
-        return solicitudService.persistirSolicitud(miSolicitud);
-        
-        }
+        miSolicitud = solicitudService.persistirSolicitud(miSolicitud);
+        return ResponseEntity.ok(miSolicitud);
     }
+}
     
