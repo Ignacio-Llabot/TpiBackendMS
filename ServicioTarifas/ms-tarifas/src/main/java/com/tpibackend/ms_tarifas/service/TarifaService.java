@@ -2,6 +2,8 @@ package com.tpibackend.ms_tarifas.service;
 
 import java.util.Objects;
 import org.springframework.stereotype.Service;
+
+import com.tpibackend.ms_tarifas.dto.PromedioAtributosDTO;
 import com.tpibackend.ms_tarifas.entity.Tarifa;
 import com.tpibackend.ms_tarifas.repository.TarifaRepository;
 import java.util.List;
@@ -40,6 +42,35 @@ public class TarifaService {
             throw new EntityNotFoundException("Tarifa no encontrada con id: " + id);
         }
         tarifaRepository.deleteById(id);
+    }
+
+    public PromedioAtributosDTO obtenerPromedioAtributos() {
+        List<Tarifa> tarifas = tarifaRepository.findAll();
+        
+        if (tarifas.isEmpty()) {
+            return new PromedioAtributosDTO(0.0, 0.0, 0.0);
+        }
+        
+        double promedioCostoBaseXKm = tarifas.stream()
+                .mapToDouble(Tarifa::getCostoBaseXKm)
+                .average()
+                .orElse(0.0);
+        
+        double promedioValorLitroCombustible = tarifas.stream()
+                .mapToDouble(Tarifa::getValorLitroCombustible)
+                .average()
+                .orElse(0.0);
+        
+        double promedioConsumoCombustibleGeneral = tarifas.stream()
+                .mapToDouble(Tarifa::getConsumoCombustibleGeneral)
+                .average()
+                .orElse(0.0);
+        
+        return new PromedioAtributosDTO(
+                promedioCostoBaseXKm,
+                promedioValorLitroCombustible,
+                promedioConsumoCombustibleGeneral
+        );
     }
 
 }

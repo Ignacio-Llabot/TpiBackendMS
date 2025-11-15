@@ -3,7 +3,6 @@ package com.tpibackend.ms_tarifas.controller;
 
 import com.tpibackend.ms_tarifas.entity.Tarifa;
 import com.tpibackend.ms_tarifas.service.TarifaService;
-import com.tpibackend.ms_tarifas.dto.TipoCamionDTO;
 
 import jakarta.persistence.EntityNotFoundException;
 

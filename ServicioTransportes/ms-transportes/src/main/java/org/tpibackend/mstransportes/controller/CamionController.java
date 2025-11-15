@@ -28,14 +28,14 @@ public class CamionController {
 
     // Definimos endpoints
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Camion> getCamionPorPatente(@PathVariable String patente) {
+    @GetMapping("/{patente}")
+    public ResponseEntity<Camion> getCamionPorPatente(@PathVariable("patente") String patente) {
         Camion camion = camionService.getCamionPorPatente(patente);
         return ResponseEntity.ok(camion); // 200 OK
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Camion> putCamion(@PathVariable String patente, @RequestBody Camion camion) {
+    @PutMapping("/{patente}")
+    public ResponseEntity<Camion> putCamion(@PathVariable("patente") String patente, @RequestBody Camion camion) {
 
         // Obtiene
         Camion miCamion = camionService.getCamionPorPatente(patente);
@@ -57,8 +57,8 @@ public class CamionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(camionCreado); // 201 Created
     }
     
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCamion(@PathVariable String patente) {
+    @DeleteMapping("/{patente}")
+    public ResponseEntity<Void> deleteCamion(@PathVariable("patente") String patente) {
         camionService.eliminarCamionPorPatente(patente);
         return ResponseEntity.noContent().build(); // 204 No Content
     }

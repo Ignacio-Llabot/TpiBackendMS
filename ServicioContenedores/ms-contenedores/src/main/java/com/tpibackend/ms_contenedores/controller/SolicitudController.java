@@ -29,6 +29,12 @@ public class SolicitudController {
         return ResponseEntity.status(HttpStatus.CREATED).body(solicitud);
     }
 
+    @GetMapping("{id}")
+    public ResponseEntity<Solicitud> getSolicitudPorId(@PathVariable Integer id) {
+        Solicitud solicitud = solicitudService.getSolicitudPorId(id);
+        return ResponseEntity.ok(solicitud);
+    }
+
     @PutMapping("{id}")
     public ResponseEntity<Solicitud> modificarSolicitud(@PathVariable Integer id, @RequestBody Solicitud solicitudNueva) {
 
@@ -49,5 +55,7 @@ public class SolicitudController {
         miSolicitud = solicitudService.persistirSolicitud(miSolicitud);
         return ResponseEntity.ok(miSolicitud);
     }
+
+    
 }
     

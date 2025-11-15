@@ -8,8 +8,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.tpibackend.mstransportes.dto.TramoDTO;
+import org.tpibackend.mstransportes.dto.SolicitudRemotaDTO;
+import org.tpibackend.mstransportes.entity.Camion;
 import org.tpibackend.mstransportes.entity.Deposito;
 import org.tpibackend.mstransportes.entity.Estado;
 import org.tpibackend.mstransportes.entity.Ruta;
@@ -20,6 +24,11 @@ import org.tpibackend.mstransportes.repository.TramoRepository;
 import org.tpibackend.mstransportes.repository.UbicacionRepository;
 import org.tpibackend.mstransportes.service.osrmstategies.Strategy;
 import org.tpibackend.mstransportes.service.osrmstategies.UrgenteStrategy;
+
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -38,13 +47,21 @@ public class TramoService {
 
     private final UbicacionRepository ubicacionRepository;
 
+    private final CamionService camionService;
+
+    private final RestTemplate restTemplate;
+
+    private final String contenedoresServiceBaseUrl;
+
     public TramoService(
         TramoRepository tramoRepository,
         OsrmService osrmService,
         EstadoService estadoService,
         TipoTramoService tipoTramoService,
         DepositoService depositoService,
-        UbicacionRepository ubicacionRepository
+        UbicacionRepository ubicacionRepository,
+        CamionService camionService,
+        @Value("${ms.contenedores.url}") String contenedoresServiceBaseUrl
     ) {
         this.tramoRepository = tramoRepository;
         this.osrmService = osrmService;
@@ -52,6 +69,9 @@ public class TramoService {
         this.tipoTramoService = tipoTramoService;
         this.depositoService = depositoService;
         this.ubicacionRepository = ubicacionRepository;
+        this.camionService = camionService;
+        this.restTemplate = new RestTemplate();
+        this.contenedoresServiceBaseUrl = contenedoresServiceBaseUrl;
     }
 
     public Tramo getTramoPorId(Integer tramoId) {
@@ -155,6 +175,119 @@ public class TramoService {
 
     public void setStrategyOsrmService(Strategy strategy) {
         osrmService.setStrategy(strategy);
+    }
+
+    public Tramo asignarCamionATramo(Integer solicitudId, Integer tramoId, String patenteCamion) {
+        Objects.requireNonNull(solicitudId, "la id de la solicitud no puede ser nula");
+        Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
+        Objects.requireNonNull(patenteCamion, "la patente del camión no puede ser nula");
+
+        Tramo tramo = obtenerTramoDeSolicitud(solicitudId, tramoId);
+
+        if (tramo.getCamion() != null) {
+            throw new IllegalStateException("El tramo ya tiene un camión asignado");
+        }
+
+        Camion camion = camionService.getCamionPorPatente(patenteCamion);
+
+        if (Boolean.FALSE.equals(camion.getDisponibilidad())) {
+            throw new IllegalStateException("El camión no está disponible para asignarse");
+        }
+
+        validarCapacidadesCamion(solicitudId, camion);
+
+        tramo.setCamion(camion);
+        camion.setDisponibilidad(false);
+        camionService.persistirCamion(camion);
+        return persistirTramo(tramo);
+    }
+
+    public Tramo marcarTramoEnCamino(Integer solicitudId, Integer tramoId) {
+        Objects.requireNonNull(solicitudId, "la id de la solicitud no puede ser nula");
+        Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
+
+        Tramo tramo = obtenerTramoDeSolicitud(solicitudId, tramoId);
+
+        Estado estadoActual = tramo.getEstado();
+        if (estadoActual == null || !"pendiente".equalsIgnoreCase(estadoActual.getNombre())) {
+            throw new IllegalStateException("El tramo debe estar en estado pendiente para marcarlo en camino");
+        }
+
+        if (tramo.getCamion() == null) {
+            throw new IllegalStateException("No se puede marcar en camino un tramo sin camión asignado");
+        }
+
+        Estado estadoEnCamino = estadoService.getEstadoPorNombre("en camino");
+        tramo.setEstado(estadoEnCamino);
+        return persistirTramo(tramo);
+    }
+
+    public Tramo marcarTramoFinalizado(Integer solicitudId, Integer tramoId) {
+        Objects.requireNonNull(solicitudId, "la id de la solicitud no puede ser nula");
+        Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
+
+        Tramo tramo = obtenerTramoDeSolicitud(solicitudId, tramoId);
+
+        Estado estadoActual = tramo.getEstado();
+        if (estadoActual == null || !"en camino".equalsIgnoreCase(estadoActual.getNombre())) {
+            throw new IllegalStateException("El tramo debe estar en estado en camino para marcarlo finalizado");
+        }
+
+        Estado estadoFinalizado = estadoService.getEstadoPorNombre("finalizado");
+        tramo.setEstado(estadoFinalizado);
+        return persistirTramo(tramo);
+    }
+
+    private void validarCapacidadesCamion(Integer solicitudId, Camion camion) {
+        SolicitudRemotaDTO solicitud = obtenerSolicitudRemota(solicitudId);
+        if (solicitud == null || solicitud.getContenedor() == null) {
+            throw new EntityNotFoundException("No se encontró un contenedor asociado a la solicitud: " + solicitudId);
+        }
+
+        SolicitudRemotaDTO.ContenedorRemotoDTO contenedor = solicitud.getContenedor();
+        Double pesoContenedor = contenedor.getPeso();
+        Double volumenContenedor = contenedor.getVolumen();
+
+        Double capacidadPesoCamion = camion.getCapacidadPeso();
+        Double capacidadVolumenCamion = camion.getCapacidadVolumen();
+
+        if (pesoContenedor != null && capacidadPesoCamion != null && pesoContenedor > capacidadPesoCamion) {
+            throw new IllegalStateException("El peso del contenedor excede la capacidad del camión");
+        }
+
+        if (volumenContenedor != null && capacidadVolumenCamion != null && volumenContenedor > capacidadVolumenCamion) {
+            throw new IllegalStateException("El volumen del contenedor excede la capacidad del camión");
+        }
+    }
+
+    private SolicitudRemotaDTO obtenerSolicitudRemota(Integer solicitudId) {
+        String baseUrl = Objects.requireNonNull(contenedoresServiceBaseUrl, "ms.contenedores.url no configurada");
+
+        String url = UriComponentsBuilder
+            .fromUriString(baseUrl)
+            .path("/api/v1/solicitudes/{id}")
+            .buildAndExpand(solicitudId)
+            .toUriString();
+
+        try {
+            return restTemplate.getForObject(url, SolicitudRemotaDTO.class);
+        } catch (HttpClientErrorException ex) {
+            if (ex.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
+                throw new EntityNotFoundException("Solicitud no encontrada con id: " + solicitudId);
+            }
+            throw new IllegalStateException("Error al consultar la solicitud: " + solicitudId, ex);
+        } catch (RestClientException ex) {
+            throw new IllegalStateException("No se pudo obtener la solicitud: " + solicitudId, ex);
+        }
+    }
+
+    private Tramo obtenerTramoDeSolicitud(Integer solicitudId, Integer tramoId) {
+        Tramo tramo = getTramoPorId(tramoId);
+        Ruta ruta = tramo.getRuta();
+        if (ruta == null || !Objects.equals(ruta.getIdSolicitud(), solicitudId)) {
+            throw new EntityNotFoundException("El tramo no pertenece a la solicitud indicada");
+        }
+        return tramo;
     }
 
     private Map<Integer, Deposito> construirIndiceDepositos(List<Deposito> depositos) {

@@ -1,5 +1,6 @@
 package org.tpibackend.mstransportes.service;
 
+import java.util.List;
 import java.util.Objects;
 
 import org.springframework.stereotype.Service;
@@ -22,5 +23,7 @@ public class TipoCamionService {
         return tipoCamionRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("TipoCamion no encontrado con id: " + id));
     }
+    
+    
     
 }

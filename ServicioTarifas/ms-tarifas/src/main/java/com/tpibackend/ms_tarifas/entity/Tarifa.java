@@ -29,8 +29,6 @@ public class Tarifa {
     @Column(name="\"consumoCombustibleGeneral\"", nullable = false)
     private Double consumoCombustibleGeneral;
 
-    
     @Column(name="\"idTipoCamion\"", nullable = false)
     private Integer tipoCamion;
-
 }
