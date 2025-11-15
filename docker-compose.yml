@@ -52,6 +52,19 @@ services:
     depends_on:
       - postgres
 
+  ms-tarifas:
+    build: ./ServicioTarifas/ms-tarifas 
+    container_name: ms-tarifas
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mi_base
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+    ports:
+      - "8084:8083" 
+    networks:
+      - mi_red_interna
+    depends_on:
+      - postgres
   api-gateway:
     build: ./apigateway 
     container_name: api-gateway
@@ -68,12 +81,17 @@ services:
       # para que coincidan con tu GatewayConfig.java
       APP_MICROSERVICIOS_URL_CONTENEDORES: http://ms-contenedores:8080
       APP_MICROSERVICIOS_URL_TRANSPORTES: http://ms-transportes:8081
-      APP_MICROSERVICIOS_URL_TARIFAS: http://ms-tarifas:8080 # Asumiendo que existe
+      APP_MICROSERVICIOS_URL_TARIFAS: http://ms-tarifas:8083 # Asumiendo que existe
     networks:
       - mi_red_interna
     depends_on:
       - ms-contenedores
       - ms-transportes
+      - ms-tarifas
+  
+  
+
+
   
   keycloak:
     image: quay.io/keycloak/keycloak:latest
