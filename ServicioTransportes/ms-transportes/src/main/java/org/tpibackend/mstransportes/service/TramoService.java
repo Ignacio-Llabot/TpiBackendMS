@@ -84,10 +84,6 @@ public class TramoService {
         Ubicacion ubicacionFin,
         LocalDateTime fechaHoraInicio
     ) {
-
-        System.out.println("4"); // TODO eliminar
-        List<Deposito> depositos = depositoService.getDepositos();
-        System.out.println("5"); // TODO eliminar
         Ubicacion origenPersistido = asegurarUbicacion(ubicacionInicio);
         Ubicacion destinoPersistido = asegurarUbicacion(ubicacionFin);
 
@@ -101,7 +97,6 @@ public class TramoService {
             destinoPersistido,
             depositosDisponibles
         );
-        System.out.println("7"); // TODO eliminar
         if (tramoDTOs.isEmpty()) {
             return List.of();
         }
@@ -196,6 +191,7 @@ public class TramoService {
         return tipoTramoService.getTipoTramoPorNombre("deposito-deposito");
     }
 
+    @SuppressWarnings("null")
     private Ubicacion asegurarUbicacion(Ubicacion ubicacion) {
         Objects.requireNonNull(ubicacion, "la ubicacion no puede ser nula");
 
