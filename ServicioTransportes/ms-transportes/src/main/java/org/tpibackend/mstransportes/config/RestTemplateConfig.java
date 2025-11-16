@@ -1,19 +1,20 @@
-package com.tpibackend.ms_contenedores.config;
+package org.tpibackend.mstransportes.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.util.StringUtils;
-import com.tpibackend.ms_contenedores.logging.LoggingConstants;
+import org.springframework.web.client.RestTemplate;
+import org.tpibackend.mstransportes.logging.LoggingConstants;
 
 @Configuration
 public class RestTemplateConfig {
+
     private static final Logger log = LoggerFactory.getLogger(RestTemplateConfig.class);
-    
+
     @Bean
     public RestTemplate restTemplate() {
         RestTemplate restTemplate = new RestTemplate();

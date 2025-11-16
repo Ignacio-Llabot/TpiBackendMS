@@ -8,11 +8,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.tpibackend.mstransportes.dto.TramoDTO;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.tpibackend.mstransportes.dto.SolicitudRemotaDTO;
+import org.tpibackend.mstransportes.dto.TramoDTO;
 import org.tpibackend.mstransportes.entity.Camion;
 import org.tpibackend.mstransportes.entity.Deposito;
 import org.tpibackend.mstransportes.entity.Estado;
@@ -24,11 +30,6 @@ import org.tpibackend.mstransportes.repository.TramoRepository;
 import org.tpibackend.mstransportes.repository.UbicacionRepository;
 import org.tpibackend.mstransportes.service.osrmstategies.Strategy;
 import org.tpibackend.mstransportes.service.osrmstategies.UrgenteStrategy;
-
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -55,6 +56,8 @@ public class TramoService {
 
     private final String tarifasServiceBaseUrl;
 
+    private static final Logger log = LoggerFactory.getLogger(TramoService.class);
+
     public TramoService(
         TramoRepository tramoRepository,
         OsrmService osrmService,
@@ -63,6 +66,7 @@ public class TramoService {
         DepositoService depositoService,
         UbicacionRepository ubicacionRepository,
         CamionService camionService,
+        RestTemplate restTemplate,
         @Value("${ms.contenedores.url}") String contenedoresServiceBaseUrl,
         @Value("${ms.tarifas.url}") String tarifasServiceBaseUrl
     ) {
@@ -73,7 +77,7 @@ public class TramoService {
         this.depositoService = depositoService;
         this.ubicacionRepository = ubicacionRepository;
         this.camionService = camionService;
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = restTemplate;
         this.contenedoresServiceBaseUrl = contenedoresServiceBaseUrl;
         this.tarifasServiceBaseUrl = tarifasServiceBaseUrl;
     }
@@ -81,12 +85,17 @@ public class TramoService {
     public Tramo getTramoPorId(Integer tramoId) {
         Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
         return tramoRepository.findById(tramoId)
-                .orElseThrow(() -> new EntityNotFoundException("Tramo no encontrado con id: " + tramoId));
+                .orElseThrow(() -> {
+                    log.warn("Tramo {} no encontrado", tramoId);
+                    return new EntityNotFoundException("Tramo no encontrado con id: " + tramoId);
+                });
     }
 
     public Tramo persistirTramo(Tramo tramo) {
         Objects.requireNonNull(tramo, "el tramo no puede ser nulo");
-        return tramoRepository.save(tramo);
+        Tramo guardado = tramoRepository.save(tramo);
+        log.info("Tramo {} persistido", guardado.getId());
+        return guardado;
     }
 
     public void eliminarTramoById(Integer tramoId) {
@@ -94,22 +103,28 @@ public class TramoService {
         if (!tramoRepository.existsById(tramoId)) {
             throw new EntityNotFoundException("Tramo no encontrado con id: " + tramoId);
         }
+        log.info("Eliminando tramo {}", tramoId);
         tramoRepository.deleteById(tramoId);
     }
 
     public List<Tramo> guardarTramos(List<Tramo> tramos) {
         Objects.requireNonNull(tramos, "la lista de tramos no puede ser nula");
-        return tramoRepository.saveAll(tramos);
+        List<Tramo> guardados = tramoRepository.saveAll(tramos);
+        log.info("Persistidos {} tramos", guardados.size());
+        return guardados;
     }
 
     public List<Tramo> getTramosPorRuta(Integer rutaId) {
         Objects.requireNonNull(rutaId, "la id de la ruta no puede ser nula");
-        return tramoRepository.findByRuta_IdRuta(rutaId);
+        List<Tramo> tramos = tramoRepository.findByRuta_IdRuta(rutaId);
+        log.info("Recuperados {} tramos para la ruta {}", tramos.size(), rutaId);
+        return tramos;
     }
 
     public void actualizarCostoAproximado(Integer tramoId, Double incrementoCosto) {
         Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
         Objects.requireNonNull(incrementoCosto, "el incremento de costo no puede ser nulo");
+        log.info("Incrementando costo aproximado del tramo {} en {}", tramoId, incrementoCosto);
 
         Tramo tramo = getTramoPorId(tramoId);
         double costoActual = tramo.getCostoAproximado() != null ? tramo.getCostoAproximado() : 0.0d;
@@ -120,6 +135,7 @@ public class TramoService {
     public void actualizarCostoReal(Integer tramoId, Double costoReal) {
         Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
         Objects.requireNonNull(costoReal, "el costo real no puede ser nulo");
+        log.info("Actualizando costo real del tramo {} a {}", tramoId, costoReal);
 
         Tramo tramo = getTramoPorId(tramoId);
         tramo.setCostoReal(costoReal);
@@ -138,7 +154,15 @@ public class TramoService {
         ruta.setUbicacionInicial(origenPersistido);
         ruta.setUbicacionFinal(destinoPersistido);
 
+        log.info(
+            "Calculando tramos para solicitud {} entre {} y {}",
+            ruta.getIdSolicitud(),
+            describirUbicacion(origenPersistido),
+            describirUbicacion(destinoPersistido)
+        );
+
         List<Deposito> depositosDisponibles = depositoService.getDepositos();
+        log.debug("Se recuperaron {} depósitos para evaluar", depositosDisponibles.size());
 
         List<TramoDTO> tramoDTOs = osrmService.calcularTramosDTO(
             origenPersistido,
@@ -146,11 +170,17 @@ public class TramoService {
             depositosDisponibles
         );
         if (tramoDTOs.isEmpty()) {
+            log.warn("No se obtuvieron tramos desde OSRM para la solicitud {}", ruta.getIdSolicitud());
             return List.of();
         }
 
         Strategy estrategiaActual = osrmService.getStrategy();
         boolean esRutaDirecta = estrategiaActual instanceof UrgenteStrategy;
+        log.info(
+            "OSRM devolvió {} tramos utilizando la estrategia {}",
+            tramoDTOs.size(),
+            estrategiaActual != null ? estrategiaActual.getClass().getSimpleName() : "desconocida"
+        );
 
         Estado estadoPendiente = estadoService.getEstadoPorNombre("pendiente");
 
@@ -198,10 +228,31 @@ public class TramoService {
             }
         }
 
+        log.info("Se calcularon {} tramos para la solicitud {}", tramos.size(), ruta.getIdSolicitud());
         return tramos;
     }
 
+    private String describirUbicacion(Ubicacion ubicacion) {
+        if (ubicacion == null) {
+            return "ubicación desconocida";
+        }
+        Integer id = ubicacion.getIdUbicacion();
+        Double lat = ubicacion.getLatitud();
+        Double lon = ubicacion.getLongitud();
+        String coordenadas = (lat != null && lon != null)
+            ? String.format("(%.6f, %.6f)", lat, lon)
+            : "(sin coordenadas)";
+        if (id != null) {
+            return String.format("id=%d %s", id, coordenadas);
+        }
+        if (lat != null && lon != null) {
+            return coordenadas;
+        }
+        return "ubicación sin coordenadas";
+    }
+
     public void setStrategyOsrmService(Strategy strategy) {
+        log.debug("Estrategia OSRM establecida en {}", strategy.getClass().getSimpleName());
         osrmService.setStrategy(strategy);
     }
 
@@ -209,6 +260,8 @@ public class TramoService {
         Objects.requireNonNull(solicitudId, "la id de la solicitud no puede ser nula");
         Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
         Objects.requireNonNull(patenteCamion, "la patente del camión no puede ser nula");
+
+        log.info("Asignando camión {} al tramo {} de la solicitud {}", patenteCamion, tramoId, solicitudId);
 
         Tramo tramo = obtenerTramoDeSolicitud(solicitudId, tramoId);
 
@@ -227,12 +280,16 @@ public class TramoService {
         tramo.setCamion(camion);
         camion.setDisponibilidad(false);
         camionService.persistirCamion(camion);
-        return persistirTramo(tramo);
+        Tramo actualizado = persistirTramo(tramo);
+        log.info("Camión {} asignado al tramo {} de la solicitud {}", patenteCamion, tramoId, solicitudId);
+        return actualizado;
     }
 
     public Tramo marcarTramoEnCamino(Integer solicitudId, Integer tramoId) {
         Objects.requireNonNull(solicitudId, "la id de la solicitud no puede ser nula");
         Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
+
+        log.info("Marcando tramo {} de la solicitud {} como en camino", tramoId, solicitudId);
 
         Tramo tramo = obtenerTramoDeSolicitud(solicitudId, tramoId);
 
@@ -247,12 +304,16 @@ public class TramoService {
 
         Estado estadoEnCamino = estadoService.getEstadoPorNombre("en camino");
         tramo.setEstado(estadoEnCamino);
-        return persistirTramo(tramo);
+        Tramo actualizado = persistirTramo(tramo);
+        log.info("Tramo {} de la solicitud {} marcado como en camino", tramoId, solicitudId);
+        return actualizado;
     }
 
     public Tramo marcarTramoFinalizado(Integer solicitudId, Integer tramoId) {
         Objects.requireNonNull(solicitudId, "la id de la solicitud no puede ser nula");
         Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
+
+        log.info("Marcando tramo {} de la solicitud {} como finalizado", tramoId, solicitudId);
 
         Tramo tramo = obtenerTramoDeSolicitud(solicitudId, tramoId);
 
@@ -267,13 +328,16 @@ public class TramoService {
 
         Integer rutaId = tramoActualizado.getRuta() != null ? tramoActualizado.getRuta().getIdRuta() : null;
         if (rutaId != null) {
+            log.info("Solicitando recálculo de tarifa real para la ruta {}", rutaId);
             solicitarRecalculoTarifaReal(rutaId);
         }
 
+        log.info("Tramo {} de la solicitud {} marcado como finalizado", tramoId, solicitudId);
         return tramoActualizado;
     }
 
     private void validarCapacidadesCamion(Integer solicitudId, Camion camion) {
+        log.debug("Validando capacidades del camión {} para la solicitud {}", camion.getPatente(), solicitudId);
         SolicitudRemotaDTO solicitud = obtenerSolicitudRemota(solicitudId);
         if (solicitud == null || solicitud.getContenedor() == null) {
             throw new EntityNotFoundException("No se encontró un contenedor asociado a la solicitud: " + solicitudId);
@@ -293,6 +357,8 @@ public class TramoService {
         if (volumenContenedor != null && capacidadVolumenCamion != null && volumenContenedor > capacidadVolumenCamion) {
             throw new IllegalStateException("El volumen del contenedor excede la capacidad del camión");
         }
+
+        log.debug("Capacidades del camión {} validadas para la solicitud {}", camion.getPatente(), solicitudId);
     }
 
     private SolicitudRemotaDTO obtenerSolicitudRemota(Integer solicitudId) {
@@ -305,13 +371,22 @@ public class TramoService {
             .toUriString();
 
         try {
-            return restTemplate.getForObject(url, SolicitudRemotaDTO.class);
+            SolicitudRemotaDTO respuesta = restTemplate.getForObject(url, SolicitudRemotaDTO.class);
+            if (respuesta != null) {
+                log.info("Solicitud remota {} recuperada desde ms-contenedores", solicitudId);
+            } else {
+                log.warn("Solicitud remota {} no encontrada en ms-contenedores", solicitudId);
+            }
+            return respuesta;
         } catch (HttpClientErrorException ex) {
             if (ex.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
+                log.warn("Solicitud remota {} no encontrada (404)", solicitudId);
                 throw new EntityNotFoundException("Solicitud no encontrada con id: " + solicitudId);
             }
+            log.error("Error http al consultar la solicitud {}", solicitudId, ex);
             throw new IllegalStateException("Error al consultar la solicitud: " + solicitudId, ex);
         } catch (RestClientException ex) {
+            log.error("Fallo al consultar la solicitud {}", solicitudId, ex);
             throw new IllegalStateException("No se pudo obtener la solicitud: " + solicitudId, ex);
         }
     }
@@ -327,7 +402,9 @@ public class TramoService {
 
         try {
             restTemplate.postForEntity(url, null, Void.class);
+            log.info("Recalculo de tarifa real solicitado para la ruta {}", rutaId);
         } catch (RestClientException ex) {
+            log.error("No se pudo recalcular la tarifa real para la ruta {}", rutaId, ex);
             throw new IllegalStateException("No se pudo recalcular la tarifa real para la ruta: " + rutaId, ex);
         }
     }
@@ -336,6 +413,7 @@ public class TramoService {
         Tramo tramo = getTramoPorId(tramoId);
         Ruta ruta = tramo.getRuta();
         if (ruta == null || !Objects.equals(ruta.getIdSolicitud(), solicitudId)) {
+            log.warn("El tramo {} no pertenece a la solicitud {}", tramoId, solicitudId);
             throw new EntityNotFoundException("El tramo no pertenece a la solicitud indicada");
         }
         return tramo;
@@ -392,7 +470,13 @@ public class TramoService {
             ubicacion.getLatitud(),
             ubicacion.getLongitud()
         );
+        if (existente.isPresent()) {
+            log.debug("Ubicación existente reutilizada ({}, {})", ubicacion.getLatitud(), ubicacion.getLongitud());
+            return existente.get();
+        }
 
-        return existente.orElseGet(() -> ubicacionRepository.save(ubicacion));
+        Ubicacion guardada = ubicacionRepository.save(ubicacion);
+        log.info("Ubicación {} creada", guardada.getIdUbicacion());
+        return guardada;
     }
 }

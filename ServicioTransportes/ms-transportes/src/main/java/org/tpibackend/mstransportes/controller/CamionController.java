@@ -2,6 +2,9 @@ package org.tpibackend.mstransportes.controller;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,6 +21,8 @@ import org.tpibackend.mstransportes.service.CamionService;
 import org.tpibackend.mstransportes.service.TipoCamionService;
 import org.tpibackend.mstransportes.service.TransportistaService;
 
+import jakarta.persistence.EntityNotFoundException;
+
 @RestController
 @RequestMapping("/api/v1/camiones")
 public class CamionController {
@@ -25,6 +30,7 @@ public class CamionController {
     private final CamionService camionService;
     private final TipoCamionService tipoCamionService;
     private final TransportistaService transportistaService;
+    private static final Logger log = LoggerFactory.getLogger(CamionController.class);
 
     public CamionController(CamionService camionService, TipoCamionService tipoCamionService,
             TransportistaService transportistaService) {
@@ -37,6 +43,7 @@ public class CamionController {
 
     @GetMapping
     public ResponseEntity<List<CamionResumenDTO>> getCamiones() {
+        log.info("Recuperando listado de camiones");
         List<CamionResumenDTO> camiones = camionService.getCamiones()
             .stream()
             .map(camion -> new CamionResumenDTO(
@@ -46,42 +53,62 @@ public class CamionController {
                 camion.getCapacidadVolumen()
             ))
             .collect(Collectors.toList());
+        log.info("Listado de camiones obtenido con {} registros", camiones.size());
         return ResponseEntity.ok(camiones);
     }
 
     @GetMapping("/{patente}")
     public ResponseEntity<Camion> getCamionPorPatente(@PathVariable("patente") String patente) {
-        Camion camion = camionService.getCamionPorPatente(patente);
-        return ResponseEntity.ok(camion); // 200 OK
+        log.info("Consultando camión {}", patente);
+        try {
+            Camion camion = camionService.getCamionPorPatente(patente);
+            log.info("Camión {} recuperado", patente);
+            return ResponseEntity.ok(camion);
+        } catch (EntityNotFoundException ex) {
+            log.warn("Camión {} no encontrado", patente);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
     @PutMapping("/{patente}")
     public ResponseEntity<Camion> putCamion(@PathVariable("patente") String patente, @RequestBody Camion camion) {
-
-        // Obtiene
-        Camion miCamion = camionService.getCamionPorPatente(patente);
-
-        // Actualiza
-        miCamion.setCapacidadPeso(camion.getCapacidadPeso());
-        miCamion.setTipoCamion(
+        log.info("Actualizando camión {}", patente);
+        try {
+            Camion miCamion = camionService.getCamionPorPatente(patente);
+            miCamion.setCapacidadPeso(camion.getCapacidadPeso());
+            miCamion.setTipoCamion(
                 tipoCamionService.getTipoCamionPorId(camion.getTipoCamion().getIdTipoCamion()));
-        miCamion.setTransportista(
+            miCamion.setTransportista(
                 transportistaService.getTransportistaPorId(camion.getTransportista().getIdTransportista()));
 
-        // Guarda
-        return ResponseEntity.ok(camionService.persistirCamion(miCamion)); // 200 OK
+            Camion actualizado = camionService.persistirCamion(miCamion);
+            log.info("Camión {} actualizado", patente);
+            return ResponseEntity.ok(actualizado);
+        } catch (EntityNotFoundException ex) {
+            log.warn("No se pudo actualizar el camión {}: {}", patente, ex.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
     @PostMapping
     public ResponseEntity<Camion> postCamion(@RequestBody Camion camion) {
+        log.info("Creando nuevo camión");
         Camion camionCreado = camionService.persistirCamion(camion);
-        return ResponseEntity.status(HttpStatus.CREATED).body(camionCreado); // 201 Created
+        log.info("Camión creado con patente {}", camionCreado.getPatente());
+        return ResponseEntity.status(HttpStatus.CREATED).body(camionCreado);
     }
     
     @DeleteMapping("/{patente}")
     public ResponseEntity<Void> deleteCamion(@PathVariable("patente") String patente) {
-        camionService.eliminarCamionPorPatente(patente);
-        return ResponseEntity.noContent().build(); // 204 No Content
+        log.info("Eliminando camión {}", patente);
+        try {
+            camionService.eliminarCamionPorPatente(patente);
+            log.info("Camión {} eliminado", patente);
+            return ResponseEntity.noContent().build();
+        } catch (EntityNotFoundException ex) {
+            log.warn("No se encontró camión {} para eliminar", patente);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
     

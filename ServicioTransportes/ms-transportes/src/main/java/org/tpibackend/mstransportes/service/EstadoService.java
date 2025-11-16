@@ -2,6 +2,8 @@ package org.tpibackend.mstransportes.service;
 
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.tpibackend.mstransportes.entity.Estado;
 import org.tpibackend.mstransportes.repository.EstadoRepository;
@@ -12,6 +14,7 @@ import jakarta.persistence.EntityNotFoundException;
 public class EstadoService {
 
     private final EstadoRepository estadoRepository;
+    private static final Logger log = LoggerFactory.getLogger(EstadoService.class);
 
     public EstadoService(EstadoRepository estadoRepository) {
         this.estadoRepository = estadoRepository;
@@ -20,7 +23,10 @@ public class EstadoService {
     public Estado getEstadoPorId(Integer id) {
         Objects.requireNonNull(id, "la id no puede ser nula");
         return estadoRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Estado no encontrado con id: " + id));
+                .orElseThrow(() -> {
+                    log.warn("Estado {} no encontrado", id);
+                    return new EntityNotFoundException("Estado no encontrado con id: " + id);
+                });
     }
 
     public Estado getEstadoPorNombre(String nombre) {
@@ -28,7 +34,10 @@ public class EstadoService {
         return estadoRepository.findAll().stream()
                 .filter(estado -> estado.getNombre().equalsIgnoreCase(nombre))
                 .findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("Estado no encontrado con nombre: " + nombre));
+                .orElseThrow(() -> {
+                    log.warn("Estado {} no encontrado", nombre);
+                    return new EntityNotFoundException("Estado no encontrado con nombre: " + nombre);
+                });
     }
     
 
