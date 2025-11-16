@@ -1,5 +1,7 @@
 package com.tpibackend.ms_contenedores.controller;
 
+import com.tpibackend.ms_contenedores.dto.ActualizarCostoEstimadoRequest;
+import com.tpibackend.ms_contenedores.dto.ActualizarCostoFinalRequest;
 import com.tpibackend.ms_contenedores.entity.Solicitud;
 import com.tpibackend.ms_contenedores.service.SolicitudService;
 
@@ -54,6 +56,24 @@ public class SolicitudController {
         // Guarda
         miSolicitud = solicitudService.persistirSolicitud(miSolicitud);
         return ResponseEntity.ok(miSolicitud);
+    }
+
+    @PutMapping("{id}/costo-estimado")
+    public ResponseEntity<Void> actualizarCostoEstimado(
+        @PathVariable Integer id,
+        @RequestBody ActualizarCostoEstimadoRequest request
+    ) {
+        solicitudService.actualizarCostoEstimado(id, request.getCostoEstimado());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("{id}/costo-final")
+    public ResponseEntity<Void> actualizarCostoFinal(
+        @PathVariable Integer id,
+        @RequestBody ActualizarCostoFinalRequest request
+    ) {
+        solicitudService.actualizarCostoFinal(id, request.getCostoFinal());
+        return ResponseEntity.noContent().build();
     }
 
     

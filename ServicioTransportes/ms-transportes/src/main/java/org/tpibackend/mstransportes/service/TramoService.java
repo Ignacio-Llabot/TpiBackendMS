@@ -53,6 +53,8 @@ public class TramoService {
 
     private final String contenedoresServiceBaseUrl;
 
+    private final String tarifasServiceBaseUrl;
+
     public TramoService(
         TramoRepository tramoRepository,
         OsrmService osrmService,
@@ -61,7 +63,8 @@ public class TramoService {
         DepositoService depositoService,
         UbicacionRepository ubicacionRepository,
         CamionService camionService,
-        @Value("${ms.contenedores.url}") String contenedoresServiceBaseUrl
+        @Value("${ms.contenedores.url}") String contenedoresServiceBaseUrl,
+        @Value("${ms.tarifas.url}") String tarifasServiceBaseUrl
     ) {
         this.tramoRepository = tramoRepository;
         this.osrmService = osrmService;
@@ -72,6 +75,7 @@ public class TramoService {
         this.camionService = camionService;
         this.restTemplate = new RestTemplate();
         this.contenedoresServiceBaseUrl = contenedoresServiceBaseUrl;
+        this.tarifasServiceBaseUrl = tarifasServiceBaseUrl;
     }
 
     public Tramo getTramoPorId(Integer tramoId) {
@@ -101,6 +105,25 @@ public class TramoService {
     public List<Tramo> getTramosPorRuta(Integer rutaId) {
         Objects.requireNonNull(rutaId, "la id de la ruta no puede ser nula");
         return tramoRepository.findByRuta_IdRuta(rutaId);
+    }
+
+    public void actualizarCostoAproximado(Integer tramoId, Double incrementoCosto) {
+        Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
+        Objects.requireNonNull(incrementoCosto, "el incremento de costo no puede ser nulo");
+
+        Tramo tramo = getTramoPorId(tramoId);
+        double costoActual = tramo.getCostoAproximado() != null ? tramo.getCostoAproximado() : 0.0d;
+        tramo.setCostoAproximado(costoActual + incrementoCosto);
+        persistirTramo(tramo);
+    }
+
+    public void actualizarCostoReal(Integer tramoId, Double costoReal) {
+        Objects.requireNonNull(tramoId, "la id del tramo no puede ser nula");
+        Objects.requireNonNull(costoReal, "el costo real no puede ser nulo");
+
+        Tramo tramo = getTramoPorId(tramoId);
+        tramo.setCostoReal(costoReal);
+        persistirTramo(tramo);
     }
 
     public List<Tramo> calcularTramos(
@@ -240,7 +263,14 @@ public class TramoService {
 
         Estado estadoFinalizado = estadoService.getEstadoPorNombre("finalizado");
         tramo.setEstado(estadoFinalizado);
-        return persistirTramo(tramo);
+        Tramo tramoActualizado = persistirTramo(tramo);
+
+        Integer rutaId = tramoActualizado.getRuta() != null ? tramoActualizado.getRuta().getIdRuta() : null;
+        if (rutaId != null) {
+            solicitarRecalculoTarifaReal(rutaId);
+        }
+
+        return tramoActualizado;
     }
 
     private void validarCapacidadesCamion(Integer solicitudId, Camion camion) {
@@ -283,6 +313,22 @@ public class TramoService {
             throw new IllegalStateException("Error al consultar la solicitud: " + solicitudId, ex);
         } catch (RestClientException ex) {
             throw new IllegalStateException("No se pudo obtener la solicitud: " + solicitudId, ex);
+        }
+    }
+
+    private void solicitarRecalculoTarifaReal(Integer rutaId) {
+        String baseUrl = Objects.requireNonNull(tarifasServiceBaseUrl, "ms.tarifas.url no configurada");
+
+        String url = UriComponentsBuilder
+            .fromUriString(baseUrl)
+            .path("/api/v1/tarifas/tarifasReales/{rutaId}")
+            .buildAndExpand(rutaId)
+            .toUriString();
+
+        try {
+            restTemplate.postForEntity(url, null, Void.class);
+        } catch (RestClientException ex) {
+            throw new IllegalStateException("No se pudo recalcular la tarifa real para la ruta: " + rutaId, ex);
         }
     }
 

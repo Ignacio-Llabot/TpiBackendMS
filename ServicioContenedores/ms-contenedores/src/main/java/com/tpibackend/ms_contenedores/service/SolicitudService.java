@@ -88,4 +88,22 @@ public class SolicitudService {
 
         return solicitud;
     }
+
+    public void actualizarCostoEstimado(Integer solicitudId, Double costoEstimado) {
+        Objects.requireNonNull(solicitudId, "el id de la solicitud no puede ser nulo");
+        Objects.requireNonNull(costoEstimado, "el costo estimado no puede ser nulo");
+
+        Solicitud solicitud = getSolicitudPorId(solicitudId);
+        solicitud.setCostoEstimado(costoEstimado);
+        persistirSolicitud(solicitud);
+    }
+
+    public void actualizarCostoFinal(Integer solicitudId, Double costoFinal) {
+        Objects.requireNonNull(solicitudId, "el id de la solicitud no puede ser nulo");
+        Objects.requireNonNull(costoFinal, "el costo final no puede ser nulo");
+
+        Solicitud solicitud = getSolicitudPorId(solicitudId);
+        solicitud.setCostoFinal(costoFinal);
+        persistirSolicitud(solicitud);
+    }
 }

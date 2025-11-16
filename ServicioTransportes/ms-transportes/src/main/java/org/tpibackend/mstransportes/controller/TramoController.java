@@ -5,8 +5,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.tpibackend.mstransportes.dto.ActualizarCostoRealTramoRequest;
+import org.tpibackend.mstransportes.dto.ActualizarCostoTramoRequest;
 import org.tpibackend.mstransportes.entity.Tramo;
 import org.tpibackend.mstransportes.service.TramoService;
 
@@ -29,6 +32,24 @@ public class TramoController {
 	public ResponseEntity<List<Tramo>> getTramosPorRuta(@PathVariable Integer rutaId) {
 		List<Tramo> tramos = tramoService.getTramosPorRuta(rutaId);
 		return ResponseEntity.ok(tramos);
+	}
+
+	@PutMapping("/{tramoId:\\d+}/costo-aproximado")
+	public ResponseEntity<Void> actualizarCostoAproximado(
+		@PathVariable Integer tramoId,
+		@RequestBody ActualizarCostoTramoRequest request
+	) {
+		tramoService.actualizarCostoAproximado(tramoId, request.getIncrementoCosto());
+		return ResponseEntity.noContent().build();
+	}
+
+	@PutMapping("/{tramoId:\\d+}/costo-real")
+	public ResponseEntity<Void> actualizarCostoReal(
+		@PathVariable Integer tramoId,
+		@RequestBody ActualizarCostoRealTramoRequest request
+	) {
+		tramoService.actualizarCostoReal(tramoId, request.getCostoReal());
+		return ResponseEntity.noContent().build();
 	}
 
 	@PutMapping("/{solicitudId}/{tramoId}/{patenteCamion}")

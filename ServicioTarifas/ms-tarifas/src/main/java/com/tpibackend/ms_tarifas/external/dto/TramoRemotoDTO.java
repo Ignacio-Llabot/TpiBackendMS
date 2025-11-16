@@ -17,6 +17,24 @@ public class TramoRemotoDTO {
     @JsonProperty("costoAproximado")
     private Double costoAproximado;
 
+    @JsonProperty("costoReal")
+    private Double costoReal;
+
+    @JsonProperty("estado")
+    private EstadoRemotoDTO estado;
+
     @JsonProperty("camion")
     private CamionRemotoDTO camion;
+
+    public boolean isFinalizado() {
+        return estado != null && estado.getNombre() != null && "finalizado".equalsIgnoreCase(estado.getNombre());
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class EstadoRemotoDTO {
+
+        @JsonProperty("nombre")
+        private String nombre;
+    }
 }

@@ -2,6 +2,7 @@ package com.tpibackend.ms_tarifas.controller;
 
 
 import com.tpibackend.ms_tarifas.dto.TarifaAproximadaResponseDTO;
+import com.tpibackend.ms_tarifas.dto.TarifaRealResponseDTO;
 import com.tpibackend.ms_tarifas.entity.Tarifa;
 import com.tpibackend.ms_tarifas.service.TarifaService;
 
@@ -33,8 +34,8 @@ public class TarifaController {
         }
     }
 
-    @GetMapping("/tarifasAproximadas/{idRuta:\\d+}")
-    public ResponseEntity<TarifaAproximadaResponseDTO> getTarifaAproximada(@PathVariable Integer idRuta) {
+    @PostMapping("/tarifasAproximadas/{idRuta:\\d+}")
+    public ResponseEntity<TarifaAproximadaResponseDTO> postTarifaAproximada(@PathVariable Integer idRuta) {
         try {
             TarifaAproximadaResponseDTO respuesta = tarifaService.calcularTarifaAproximada(idRuta);
             return ResponseEntity.ok(respuesta);
@@ -42,6 +43,18 @@ public class TarifaController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
+    @PostMapping("/tarifasReales/{idRuta:\\d+}")
+    public ResponseEntity<TarifaRealResponseDTO> postTarifaReal(@PathVariable Integer idRuta) {
+        try {
+            TarifaRealResponseDTO respuesta = tarifaService.calcularTarifaReal(idRuta);
+            return ResponseEntity.ok(respuesta);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
     }
 

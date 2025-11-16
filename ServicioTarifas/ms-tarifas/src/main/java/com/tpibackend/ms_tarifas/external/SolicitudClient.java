@@ -1,9 +1,13 @@
 package com.tpibackend.ms_tarifas.external;
 
 import com.tpibackend.ms_tarifas.config.MsServicesProperties;
+import com.tpibackend.ms_tarifas.external.dto.ActualizarCostoEstimadoRequest;
+import com.tpibackend.ms_tarifas.external.dto.ActualizarCostoFinalRequest;
 import com.tpibackend.ms_tarifas.external.dto.SolicitudRemotaDTO;
 import java.util.Objects;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
@@ -37,6 +41,40 @@ public class SolicitudClient {
             throw ex;
         } catch (RestClientException ex) {
             throw new IllegalStateException("No se pudo obtener la solicitud " + solicitudId, ex);
+        }
+    }
+
+    public void actualizarCostoEstimado(Integer solicitudId, Double costoEstimado) {
+        String url = UriComponentsBuilder
+            .fromUriString(Objects.requireNonNull(contenedoresServiceBaseUrl))
+            .path("/api/v1/solicitudes/{id}/costo-estimado")
+            .buildAndExpand(solicitudId)
+            .toUriString();
+
+        ActualizarCostoEstimadoRequest payload = new ActualizarCostoEstimadoRequest(costoEstimado);
+        HttpEntity<ActualizarCostoEstimadoRequest> entity = new HttpEntity<>(payload);
+
+        try {
+            restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+        } catch (RestClientException ex) {
+            throw new IllegalStateException("No se pudo actualizar el costo estimado de la solicitud " + solicitudId, ex);
+        }
+    }
+
+    public void actualizarCostoFinal(Integer solicitudId, Double costoFinal) {
+        String url = UriComponentsBuilder
+            .fromUriString(Objects.requireNonNull(contenedoresServiceBaseUrl))
+            .path("/api/v1/solicitudes/{id}/costo-final")
+            .buildAndExpand(solicitudId)
+            .toUriString();
+
+        ActualizarCostoFinalRequest payload = new ActualizarCostoFinalRequest(costoFinal);
+        HttpEntity<ActualizarCostoFinalRequest> entity = new HttpEntity<>(payload);
+
+        try {
+            restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class);
+        } catch (RestClientException ex) {
+            throw new IllegalStateException("No se pudo actualizar el costo final de la solicitud " + solicitudId, ex);
         }
     }
 }
