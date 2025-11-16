@@ -1,10 +1,13 @@
 package org.tpibackend.mstransportes.controller;
 
+import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.tpibackend.mstransportes.entity.Tramo;
 import org.tpibackend.mstransportes.service.TramoService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -20,6 +23,12 @@ public class TramoController {
 
 	public TramoController(TramoService tramoService) {
 		this.tramoService = tramoService;
+	}
+
+	@GetMapping("/{rutaId:\\d+}")
+	public ResponseEntity<List<Tramo>> getTramosPorRuta(@PathVariable Integer rutaId) {
+		List<Tramo> tramos = tramoService.getTramosPorRuta(rutaId);
+		return ResponseEntity.ok(tramos);
 	}
 
 	@PutMapping("/{solicitudId}/{tramoId}/{patenteCamion}")

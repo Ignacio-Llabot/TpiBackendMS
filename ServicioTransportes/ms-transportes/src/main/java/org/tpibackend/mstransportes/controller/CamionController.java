@@ -1,15 +1,22 @@
 package org.tpibackend.mstransportes.controller;
 
+import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.tpibackend.mstransportes.dto.CamionResumenDTO;
 import org.tpibackend.mstransportes.entity.Camion;
-
 import org.tpibackend.mstransportes.service.CamionService;
 import org.tpibackend.mstransportes.service.TipoCamionService;
 import org.tpibackend.mstransportes.service.TransportistaService;
-
-
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/camiones")
@@ -27,6 +34,20 @@ public class CamionController {
     }
 
     // Definimos endpoints
+
+    @GetMapping
+    public ResponseEntity<List<CamionResumenDTO>> getCamiones() {
+        List<CamionResumenDTO> camiones = camionService.getCamiones()
+            .stream()
+            .map(camion -> new CamionResumenDTO(
+                camion.getPatente(),
+                camion.getTipoCamion() != null ? camion.getTipoCamion().getIdTipoCamion() : null,
+                camion.getCapacidadPeso(),
+                camion.getCapacidadVolumen()
+            ))
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(camiones);
+    }
 
     @GetMapping("/{patente}")
     public ResponseEntity<Camion> getCamionPorPatente(@PathVariable("patente") String patente) {

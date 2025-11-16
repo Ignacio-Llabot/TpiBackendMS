@@ -23,5 +23,8 @@ public class SolicitudRemotaDTO {
 
         @JsonProperty("volumen")
         private Double volumen;
+
+        @JsonProperty("peso")
+        private Double peso;
     }
 }

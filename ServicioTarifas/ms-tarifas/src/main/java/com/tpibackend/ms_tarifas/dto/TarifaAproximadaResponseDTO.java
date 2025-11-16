@@ -14,8 +14,10 @@ public class TarifaAproximadaResponseDTO {
     private Integer rutaId;
     private Integer solicitudId;
     private Double volumenContenedor;
+    private Double pesoContenedor;
     private Double distanciaTotal;
     private Integer cantidadDepositos;
     private Double costoEstadiaAcumulado;
-    private List<TarifaAproximadaDetalleDTO> detalles;
+    private Double costoTotalRuta;
+    private List<TarifaTramoCostoDTO> costosTramos;
 }

@@ -1,5 +1,6 @@
 package org.tpibackend.mstransportes.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -27,6 +28,7 @@ public class Tramo {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JsonIgnore // evita inicializar la ruta durante la serializacion del tramo
     @JoinColumn(name = "\"idRuta\"", nullable = false)
     private Ruta ruta;
 
