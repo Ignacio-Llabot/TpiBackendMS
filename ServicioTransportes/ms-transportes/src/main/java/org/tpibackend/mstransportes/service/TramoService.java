@@ -98,6 +98,11 @@ public class TramoService {
         return tramoRepository.saveAll(tramos);
     }
 
+    public List<Tramo> getTramosPorRuta(Integer rutaId) {
+        Objects.requireNonNull(rutaId, "la id de la ruta no puede ser nula");
+        return tramoRepository.findByRuta_IdRuta(rutaId);
+    }
+
     public List<Tramo> calcularTramos(
         Ruta ruta,
         Ubicacion ubicacionInicio,

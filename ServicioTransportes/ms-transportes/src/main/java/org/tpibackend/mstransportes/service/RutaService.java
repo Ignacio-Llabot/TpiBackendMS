@@ -1,16 +1,19 @@
 package org.tpibackend.mstransportes.service;
 
-import java.sql.Date;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.tpibackend.mstransportes.dto.RutaDetalleDTO;
+import org.tpibackend.mstransportes.dto.RutaDetalleDTO.CamionDetalleDTO;
+import org.tpibackend.mstransportes.dto.RutaDetalleDTO.TipoCamionDetalleDTO;
+import org.tpibackend.mstransportes.dto.RutaDetalleDTO.TramoDetalleDTO;
 import org.springframework.stereotype.Service;
 import org.tpibackend.mstransportes.entity.Ruta;
+import org.tpibackend.mstransportes.entity.Tramo;
 import org.tpibackend.mstransportes.entity.Ubicacion;
 import org.tpibackend.mstransportes.repository.RutaRepository;
-import org.tpibackend.mstransportes.entity.Tramo;
 import org.tpibackend.mstransportes.service.TramoService;
 import org.tpibackend.mstransportes.service.osrmstategies.Strategy;
 
@@ -20,10 +23,6 @@ import jakarta.persistence.EntityNotFoundException;
 @Service
 public class RutaService {
     
-    @Value("${ms.contenedores.url}")
-    private String URL_MS_CONTENEDORES;
-
-
     private final RutaRepository rutaRepository;
 
     private final TramoService tramosService;
@@ -37,6 +36,58 @@ public class RutaService {
         Objects.requireNonNull(id, "la id no puede ser nula");
         return rutaRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Ruta no encontrada con id: " + id));
+    }
+
+    public RutaDetalleDTO obtenerRutaDetallada(Integer idRuta) {
+        Ruta ruta = getRutaPorId(idRuta);
+        List<Tramo> tramos = tramosService.getTramosPorRuta(idRuta);
+
+        RutaDetalleDTO.RutaDetalleDTOBuilder builder = RutaDetalleDTO.builder()
+            .id(ruta.getIdRuta())
+            .idSolicitud(ruta.getIdSolicitud())
+            .cantidadTramos(ruta.getCantidadTramos())
+            .cantidadDepositos(ruta.getCantidadDepositos())
+            .ubicacionInicial(ruta.getUbicacionInicial())
+            .ubicacionFinal(ruta.getUbicacionFinal());
+
+        List<TramoDetalleDTO> detalles = tramos.stream()
+            .map(this::mapearTramo)
+            .collect(Collectors.toList());
+
+        builder.tramos(detalles);
+        return builder.build();
+    }
+
+    private TramoDetalleDTO mapearTramo(Tramo tramo) {
+        TramoDetalleDTO.TramoDetalleDTOBuilder builder = TramoDetalleDTO.builder()
+            .id(tramo.getId())
+            .ubicacionOrigen(tramo.getUbicacionOrigen())
+            .ubicacionDestino(tramo.getUbicacionDestino())
+            .distancia(tramo.getDistancia())
+            .tipoTramo(tramo.getTipoTramo())
+            .estado(tramo.getEstado())
+            .costoAproximado(tramo.getCostoAproximado())
+            .costoReal(tramo.getCostoReal())
+            .fechaHoraInicioEstimada(tramo.getFechaHoraInicioEstimada())
+            .fechaHoraFinEstimada(tramo.getFechaHoraFinEstimada())
+            .fechaHoraInicio(tramo.getFechaHoraInicio())
+            .fechaHoraFin(tramo.getFechaHoraFin());
+
+        if (tramo.getCamion() != null && tramo.getCamion().getTipoCamion() != null) {
+            TipoCamionDetalleDTO tipoCamionDetalle = TipoCamionDetalleDTO.builder()
+                .id(tramo.getCamion().getTipoCamion().getIdTipoCamion())
+                .nombre(tramo.getCamion().getTipoCamion().getNombre())
+                .build();
+
+            CamionDetalleDTO camionDetalle = CamionDetalleDTO.builder()
+                .patente(tramo.getCamion().getPatente())
+                .tipoCamion(tipoCamionDetalle)
+                .build();
+
+            builder.camion(camionDetalle);
+        }
+
+        return builder.build();
     }
 
     public Ruta persistirRuta(Ruta ruta) {
@@ -66,7 +117,6 @@ public class RutaService {
         ruta.setUbicacionInicial(ubicacionInicial);
         ruta.setUbicacionFinal(ubicacionFinal);
 
-        System.out.println("2"); // TODO eliminar
 
         calcularRuta(ruta, ubicacionInicial, ubicacionFinal, fechaHoraInicio);
 
@@ -74,7 +124,6 @@ public class RutaService {
     }
 
     public Ruta calcularRuta(Ruta ruta, Ubicacion ubicacionInicial, Ubicacion ubicacionFinal, LocalDateTime fechaHoraInicio) {
-        System.out.println("3"); // TODO eliminar
 
         List<Tramo> tramos = tramosService.calcularTramos(
             ruta,

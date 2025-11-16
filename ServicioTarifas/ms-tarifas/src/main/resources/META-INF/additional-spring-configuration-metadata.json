@@ -1,0 +1,14 @@
+{
+  "properties": [
+    {
+      "name": "ms.transportes-url",
+      "type": "java.lang.String",
+      "description": "Base URL para el microservicio de transportes"
+    },
+    {
+      "name": "ms.contenedores-url",
+      "type": "java.lang.String",
+      "description": "Base URL para el microservicio de contenedores"
+    }
+  ]
+}

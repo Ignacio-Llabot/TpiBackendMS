@@ -45,7 +45,6 @@ public class OsrmService {
         Ubicacion destino,
         List<Deposito> depositos
     ) {
-        System.out.println("6"); // TODO eliminar
         return strategy.calcularRuta(origen, destino, depositos, osrmUrl);
     }
 }

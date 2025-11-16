@@ -1,18 +1,15 @@
 package com.tpibackend.ms_tarifas.controller;
 
 
+import com.tpibackend.ms_tarifas.dto.TarifaAproximadaResponseDTO;
 import com.tpibackend.ms_tarifas.entity.Tarifa;
 import com.tpibackend.ms_tarifas.service.TarifaService;
 
 import jakarta.persistence.EntityNotFoundException;
 
-import org.apache.catalina.connector.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 
 
 @RestController
@@ -25,7 +22,7 @@ public class TarifaController {
         this.tarifaService = tarifaService;
     }
 
-    @GetMapping("{id}")
+    @GetMapping("/{id:\\d+}")
     public ResponseEntity<Tarifa> getTarifa(@PathVariable Integer id) {
         try {
             Tarifa tarifa = tarifaService.getTarifaPorId(id);
@@ -36,13 +33,25 @@ public class TarifaController {
         }
     }
 
+    @GetMapping("/tarifasAproximadas/{idRuta:\\d+}")
+    public ResponseEntity<TarifaAproximadaResponseDTO> getTarifaAproximada(@PathVariable Integer idRuta) {
+        try {
+            TarifaAproximadaResponseDTO respuesta = tarifaService.calcularTarifaAproximada(idRuta);
+            return ResponseEntity.ok(respuesta);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+    }
+
     @PostMapping
     public ResponseEntity<Tarifa> postTarifa(@RequestBody Tarifa tarifa) {
         Tarifa tarifaCreada = tarifaService.persistirTarifa(tarifa);
         return ResponseEntity.status(HttpStatus.CREATED).body(tarifaCreada);
     }
 
-    @PutMapping("{id}")
+    @PutMapping("/{id:\\d+}")
     public ResponseEntity<Tarifa> putTarifa(@PathVariable Integer id, @RequestBody Tarifa tarifa) {
         try {
             Tarifa miTarifa = tarifaService.getTarifaPorId(id);
@@ -54,14 +63,14 @@ public class TarifaController {
             // Aca le reemplazo por el id del tipo de camion que voy a querer, pero no se como seria para que dsp reemplace el id por el camion, o si el q postea la tarifa tiene q mandar el id del camion
             miTarifa.setTipoCamion(tarifa.getTipoCamion());
 
-            Tarifa tarifaActualizada = tarifaService.persistirTarifa(tarifa);
+            Tarifa tarifaActualizada = tarifaService.persistirTarifa(miTarifa);
             return ResponseEntity.ok(tarifaActualizada);
         } catch (EntityNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 
-    @DeleteMapping("{id}")
+    @DeleteMapping("/{id:\\d+}")
     public ResponseEntity<Void> deleteTarifa(@PathVariable Integer id) {
         try {
             tarifaService.eliminarTarifaPorId(id);

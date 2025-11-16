@@ -3,18 +3,20 @@ package org.tpibackend.mstransportes.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.tpibackend.mstransportes.entity.Ruta;
+import org.tpibackend.mstransportes.dto.RutaDetalleDTO;
 import org.tpibackend.mstransportes.entity.Ubicacion;
 import org.tpibackend.mstransportes.service.RutaService;
 import org.tpibackend.mstransportes.service.osrmstategies.*;
 
-import java.sql.Date;
+import jakarta.persistence.EntityNotFoundException;
+
 import java.time.LocalDateTime;
-import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -78,5 +80,25 @@ public class RutaController {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // error acá
             }
         }
+
+        @GetMapping("/{idRuta}")
+        public ResponseEntity<Ruta> getRutaPorId(@PathVariable Integer idRuta) {
+            Ruta ruta = rutaService.getRutaPorId(idRuta);
+            if (ruta != null) {
+                return ResponseEntity.ok(ruta);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        }
+    
+    @GetMapping("/{idRuta}/detalle")
+    public ResponseEntity<RutaDetalleDTO> getRutaDetallada(@PathVariable Integer idRuta) {
+        try {
+            RutaDetalleDTO detalle = rutaService.obtenerRutaDetallada(idRuta);
+            return ResponseEntity.ok(detalle);
+        } catch (EntityNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
     }
 

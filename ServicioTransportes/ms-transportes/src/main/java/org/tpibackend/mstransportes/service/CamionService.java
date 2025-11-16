@@ -41,5 +41,5 @@ public class CamionService {
         camionRepository.deleteById(patente);
     }
 
-    // TODO metodo para llamar al servicio de tramos para asignar un camion
+
 }
