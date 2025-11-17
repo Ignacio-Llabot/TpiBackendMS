@@ -1,0 +1,917 @@
+{
+  "info": {
+    "name": "TPI Backend - Flujo End-to-End",
+    "description": "Escenario lineal para validar todas las funcionalidades principales atravesando el API Gateway. Ejecuta los pasos en orden para simular el ciclo completo de una solicitud, desde la creación de datos base hasta el cálculo de tarifas finales.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Autenticación",
+      "description": "Obtiene y almacena los tokens de cada rol. Ejecuta cada request antes de continuar, de modo que las carpetas posteriores puedan reutilizar los tokens guardados.",
+      "item": [
+        {
+          "name": "Token CLIENTE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{cliente_username}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{cliente_password}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{keycloak_url}}/realms/{{keycloak_realm}}/protocol/openid-connect/token",
+              "host": [
+                "{{keycloak_url}}"
+              ],
+              "path": [
+                "realms",
+                "{{keycloak_realm}}",
+                "protocol",
+                "openid-connect",
+                "token"
+              ]
+            },
+            "description": "Autentica al CLIENTE y almacena su access token en la variable de entorno `token_cliente`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 al obtener token de cliente', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Token de cliente guardado', function () {",
+                  "  const data = pm.response.json();",
+                  "  pm.expect(data).to.have.property('access_token');",
+                  "  pm.environment.set('token_cliente', data.access_token);",
+                  "  pm.environment.set('refresh_token_cliente', data.refresh_token || '');",
+                  "  if (data.expires_in) {",
+                  "    const expiry = new Date(Date.now() + data.expires_in * 1000).toISOString();",
+                  "    pm.environment.set('token_cliente_expiry', expiry);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token OPERADOR",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{operador_username}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{operador_password}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{keycloak_url}}/realms/{{keycloak_realm}}/protocol/openid-connect/token",
+              "host": [
+                "{{keycloak_url}}"
+              ],
+              "path": [
+                "realms",
+                "{{keycloak_realm}}",
+                "protocol",
+                "openid-connect",
+                "token"
+              ]
+            },
+            "description": "Autentica al OPERADOR y almacena su access token en la variable `token_operador`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 al obtener token de operador', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Token de operador guardado', function () {",
+                  "  const data = pm.response.json();",
+                  "  pm.expect(data).to.have.property('access_token');",
+                  "  pm.environment.set('token_operador', data.access_token);",
+                  "  pm.environment.set('refresh_token_operador', data.refresh_token || '');",
+                  "  if (data.expires_in) {",
+                  "    const expiry = new Date(Date.now() + data.expires_in * 1000).toISOString();",
+                  "    pm.environment.set('token_operador_expiry', expiry);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token TRANSPORTISTA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{client_id}}"
+                },
+                {
+                  "key": "client_secret",
+                  "value": "{{client_secret}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{transportista_username}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{transportista_password}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{keycloak_url}}/realms/{{keycloak_realm}}/protocol/openid-connect/token",
+              "host": [
+                "{{keycloak_url}}"
+              ],
+              "path": [
+                "realms",
+                "{{keycloak_realm}}",
+                "protocol",
+                "openid-connect",
+                "token"
+              ]
+            },
+            "description": "Autentica al TRANSPORTISTA y almacena su access token en `token_transportista`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 al obtener token de transportista', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Token de transportista guardado', function () {",
+                  "  const data = pm.response.json();",
+                  "  pm.expect(data).to.have.property('access_token');",
+                  "  pm.environment.set('token_transportista', data.access_token);",
+                  "  pm.environment.set('refresh_token_transportista', data.refresh_token || '');",
+                  "  if (data.expires_in) {",
+                  "    const expiry = new Date(Date.now() + data.expires_in * 1000).toISOString();",
+                  "    pm.environment.set('token_transportista_expiry', expiry);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Operador · Datos Base",
+      "description": "El OPERADOR crea la información mínima necesaria para que el flujo se ejecute sobre datos conocidos.",
+      "item": [
+        {
+          "name": "Crear Cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"99001122\",\n  \"nombre\": \"Cliente\",\n  \"apellido\": \"Demo\",\n  \"correo\": \"cliente.demo@example.com\",\n  \"telefono\": \"+54 11 5555-0000\",\n  \"direccion\": \"Av. Siempre Viva 742\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/clientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "clientes"
+              ]
+            },
+            "description": "Crea un cliente de prueba que luego se usará para generar la solicitud."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cliente creado (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Guardar DNI del cliente', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('dni');",
+                  "  pm.environment.set('cliente_dni', body.dni);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear Contenedor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"peso\": 1200.5,\n  \"volumen\": 52.0,\n  \"estado\": {\n    \"idEstado\": 1,\n    \"nombre\": \"pendiente\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/contenedores",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "contenedores"
+              ]
+            },
+            "description": "Registra un contenedor operativo y guarda el ID generado para asociarlo a la solicitud."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Contenedor creado (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Guardar ID del contenedor', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('idContenedor');",
+                  "  pm.environment.set('contenedor_id', body.idContenedor);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear Camión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patente\": \"{{camion_patente}}\",\n  \"capacidadPeso\": 20000,\n  \"capacidadVolumen\": 60,\n  \"tipoCamion\": {\n    \"idTipoCamion\": 1\n  },\n  \"transportista\": {\n    \"idTransportista\": 1\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/camiones",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "camiones"
+              ]
+            },
+            "description": "Da de alta un camión disponible que luego será asignado a los tramos de la ruta."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Camión creado o ya existente', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "pm.test('Patente de camión confirmada', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('patente');",
+                  "  pm.environment.set('camion_patente', body.patente);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Cliente · Solicitud",
+      "description": "El CLIENTE registra la solicitud y controla su estado inicial.",
+      "item": [
+        {
+          "name": "Crear Solicitud",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_cliente}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente\": {\n    \"dni\": \"{{cliente_dni}}\"\n  },\n  \"contenedor\": {\n    \"idContenedor\": {{contenedor_id}}\n  },\n  \"estado\": {\n    \"idEstado\": 1\n  },\n  \"costoEstimado\": 0,\n  \"tiempoEstimado\": 0,\n  \"costoFinal\": null,\n  \"tiempoReal\": null\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/solicitudes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "solicitudes"
+              ]
+            },
+            "description": "El cliente genera una nueva solicitud asociada al contenedor y al cliente creados en la fase previa."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Solicitud creada (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Guardar ID de solicitud', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('idSolicitud');",
+                  "  pm.environment.set('solicitud_id', body.idSolicitud);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar Solicitud",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_cliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/solicitudes/{{solicitud_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "solicitudes",
+                "{{solicitud_id}}"
+              ]
+            },
+            "description": "Permite al cliente verificar el estado de su solicitud recién creada."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Solicitud recuperada (200)', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Solicitud corresponde al cliente', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.nested.property('cliente.dni', pm.environment.get('cliente_dni'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Operador · Planificación",
+      "description": "El OPERADOR planifica la ruta asociada a la solicitud, revisa los tramos y asigna recursos.",
+      "item": [
+        {
+          "name": "Calcular Ruta Óptima",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ubicacionInicial\": {\n    \"latitud\": -34.6037,\n    \"longitud\": -58.3816\n  },\n  \"ubicacionFinal\": {\n    \"latitud\": -34.9214,\n    \"longitud\": -57.9544\n  },\n  \"fechaHoraInicio\": \"2025-11-16T09:00:00\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/rutas/{{solicitud_id}}/optima",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rutas",
+                "{{solicitud_id}}",
+                "optima"
+              ]
+            },
+            "description": "Genera la ruta para la solicitud aplicando la estrategia \"Óptima\" y almacena el identificador resultante."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Ruta creada (201)', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Guardar ID de ruta', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('idRuta');",
+                  "  pm.environment.set('ruta_id', body.idRuta);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle de Ruta",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/rutas/{{ruta_id}}/detalle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rutas",
+                "{{ruta_id}}",
+                "detalle"
+              ]
+            },
+            "description": "Revisa la composición de la ruta para conocer la cantidad de tramos y los puntos intermedios."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Detalle de ruta recuperado', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Ruta coincide con la solicitud', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('idSolicitud', parseInt(pm.environment.get('solicitud_id'), 10));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar Tramos de la Ruta",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tramos/{{ruta_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tramos",
+                "{{ruta_id}}"
+              ]
+            },
+            "description": "Recupera todos los tramos planificados y guarda sus IDs para reutilizarlos en la asignación y seguimiento."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Listado de tramos disponible', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Guardar IDs de tramos', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.be.an('array').that.is.not.empty;",
+                  "  const ids = body.map(function (tramo) { return tramo.id; });",
+                  "  pm.environment.set('tramos_ids', JSON.stringify(ids));",
+                  "  pm.environment.set('primer_tramo_id', ids[0]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Asignar Camión al Primer Tramo",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tramos/{{solicitud_id}}/{{primer_tramo_id}}/{{camion_patente}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tramos",
+                "{{solicitud_id}}",
+                "{{primer_tramo_id}}",
+                "{{camion_patente}}"
+              ]
+            },
+            "description": "Asigna el camión creado previamente al primer tramo pendiente. Repite el request cambiando `{{primer_tramo_id}}` por cada tramo de la lista si la ruta incluye varios segmentos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Camión asignado (204)', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Transportista · Ejecución",
+      "description": "El TRANSPORTISTA gestiona el ciclo de vida de cada tramo asignado.",
+      "item": [
+        {
+          "name": "Marcar Tramo En Camino",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_transportista}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tramos/{{solicitud_id}}/{{primer_tramo_id}}/encamino",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tramos",
+                "{{solicitud_id}}",
+                "{{primer_tramo_id}}",
+                "encamino"
+              ]
+            },
+            "description": "Marca el tramo seleccionado como \"en camino\". Si hay múltiples tramos, ejecuta este request para cada ID almacenado en `tramos_ids`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tramo marcado en camino (204)', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Marcar Tramo Finalizado",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_transportista}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tramos/{{solicitud_id}}/{{primer_tramo_id}}/finalizado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tramos",
+                "{{solicitud_id}}",
+                "{{primer_tramo_id}}",
+                "finalizado"
+              ]
+            },
+            "description": "Marca el tramo como finalizado. Repite para cada tramo para permitir el cálculo de la tarifa real posteriormente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tramo finalizado (204)', function () {",
+                  "  pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Operador · Costos",
+      "description": "Con los tramos planificados y ejecutados, el OPERADOR calcula las tarifas aproximadas y reales para cerrar el proceso operativo.",
+      "item": [
+        {
+          "name": "Calcular Tarifa Aproximada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tarifas/tarifasAproximadas/{{ruta_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tarifas",
+                "tarifasAproximadas",
+                "{{ruta_id}}"
+              ]
+            },
+            "description": "Calcula el costo estimado de la ruta antes de finalizar los tramos. Puede ejecutarse inmediatamente después de planificar la ruta."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tarifa aproximada disponible', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Costo aproximado presente', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('costoTotalRuta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Calcular Tarifa Real",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_operador}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/tarifas/tarifasReales/{{ruta_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tarifas",
+                "tarifasReales",
+                "{{ruta_id}}"
+              ]
+            },
+            "description": "Calcula la tarifa real luego de completar todos los tramos. Asegura que cada tramo haya sido marcado como finalizado antes de ejecutar este paso."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tarifa real calculada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Costo real presente', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('costoTotalRuta');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Cliente · Seguimiento Final",
+      "description": "El CLIENTE puede consultar el estado actualizado de su solicitud una vez completado el circuito operativo.",
+      "item": [
+        {
+          "name": "Consultar Solicitud Actualizada",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_cliente}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/solicitudes/{{solicitud_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "solicitudes",
+                "{{solicitud_id}}"
+              ]
+            },
+            "description": "Permite confirmar que la solicitud refleje los costos y estados finales luego del cálculo de tarifas reales."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Solicitud final consultada', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Solicitud mantiene el mismo ID', function () {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body).to.have.property('idSolicitud', parseInt(pm.environment.get('solicitud_id'), 10));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

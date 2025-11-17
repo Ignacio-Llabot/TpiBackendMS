@@ -45,7 +45,9 @@ public class GatewayConfig {
                         "/api/v1/depositos/**", 
                         "/api/v1/depositos",
                         "/api/v1/camiones/**",
-                        "/api/v1/camiones")
+                        "/api/v1/camiones",
+                        "/api/v1/tramos/**",
+                        "/api/v1/tramos")
                 .uri(uriTransportes)
             )
             

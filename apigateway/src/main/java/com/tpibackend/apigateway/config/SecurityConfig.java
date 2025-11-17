@@ -35,16 +35,46 @@ public class SecurityConfig {
         
         http
             .authorizeExchange(exchanges -> exchanges
-                
-                // --- REGLAS BASADAS EN TU TPI (Esto estaba bien) ---
-                .pathMatchers(HttpMethod.POST, "/api/v1/solicitudes").hasRole("CLIENTE")
-                .pathMatchers(HttpMethod.GET, "/api/v1/contenedores/*/estado").hasRole("CLIENTE")
-                .pathMatchers("/api/v1/rutas/**", "/api/v1/contenedores/trackingPend").hasRole("OPERADOR")
-                .pathMatchers(HttpMethod.PUT, "/api/v1/tramos/**").hasRole("OPERADOR")
-                .pathMatchers(HttpMethod.POST, "/api/v1/tramos/**").hasRole("TRANSPORTISTA")
-                .pathMatchers("/api/v1/depositos/**", "/api/v1/camiones/**", "/api/v1/tarifas/**").hasRole("OPERADOR")
-                
-                .anyExchange().authenticated() 
+                // ms-contenedores
+                .pathMatchers(HttpMethod.POST, "/api/v1/solicitudes/**").hasAnyRole("CLIENTE", "OPERADOR")
+                .pathMatchers(HttpMethod.GET, "/api/v1/solicitudes/**").hasAnyRole("CLIENTE", "OPERADOR")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/solicitudes/*").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/solicitudes/*/costo-estimado").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/solicitudes/*/costo-final").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.POST, "/api/v1/clientes").hasAnyRole("CLIENTE", "OPERADOR")
+                .pathMatchers(HttpMethod.GET, "/api/v1/clientes/**").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.GET, "/api/v1/contenedores/*/estado").hasAnyRole("CLIENTE", "OPERADOR")
+                .pathMatchers(HttpMethod.POST, "/api/v1/contenedores").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/contenedores/*/estado").hasAnyRole("OPERADOR", "TRANSPORTISTA")
+                .pathMatchers(HttpMethod.GET, "/api/v1/contenedores/trackingPend").hasRole("OPERADOR")
+
+                // ms-transportes
+                .pathMatchers(HttpMethod.GET, "/api/v1/camiones/**").hasAnyRole("OPERADOR", "TRANSPORTISTA")
+                .pathMatchers(HttpMethod.POST, "/api/v1/camiones").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/camiones/**").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.DELETE, "/api/v1/camiones/**").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.GET, "/api/v1/depositos/**").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.POST, "/api/v1/depositos").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/depositos/**").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.DELETE, "/api/v1/depositos/**").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.POST, "/api/v1/rutas/**").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.GET, "/api/v1/rutas/**").hasAnyRole("OPERADOR", "TRANSPORTISTA")
+                .pathMatchers(HttpMethod.GET, "/api/v1/tramos/**").hasAnyRole("OPERADOR", "TRANSPORTISTA")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/tramos/*/costo-aproximado").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/tramos/*/costo-real").hasAnyRole("OPERADOR", "TRANSPORTISTA")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/tramos/*/*/encamino").hasAnyRole("TRANSPORTISTA", "OPERADOR")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/tramos/*/*/finalizado").hasAnyRole("TRANSPORTISTA", "OPERADOR")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/tramos/*/*/*").hasRole("OPERADOR")
+
+                // ms-tarifas
+                .pathMatchers(HttpMethod.POST, "/api/v1/tarifas/tarifasAproximadas/**").hasAnyRole("OPERADOR", "CLIENTE")
+                .pathMatchers(HttpMethod.POST, "/api/v1/tarifas/tarifasReales/**").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.GET, "/api/v1/tarifas/**").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.POST, "/api/v1/tarifas").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.PUT, "/api/v1/tarifas/**").hasRole("OPERADOR")
+                .pathMatchers(HttpMethod.DELETE, "/api/v1/tarifas/**").hasRole("OPERADOR")
+
+                .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
                 // Le decimos que use JWT y que aplique nuestro "traductor" de roles.
