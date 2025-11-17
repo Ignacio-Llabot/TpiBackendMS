@@ -11,7 +11,11 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
@@ -336,6 +340,48 @@ public class TramoService {
         return tramoActualizado;
     }
 
+    public void actualizarSolicitudDesdeRuta(Integer solicitudId, Double tiempoEstimadoHoras) {
+        Objects.requireNonNull(solicitudId, "la id de la solicitud no puede ser nula");
+        log.info("Actualizando solicitud {} desde ms-transportes", solicitudId);
+
+        try {
+            Map<String, Object> solicitud = obtenerSolicitudParaActualizacion(solicitudId);
+            if (solicitud == null) {
+                log.warn("No se encontró la solicitud {} para confirmar desde ms-transportes", solicitudId);
+                return;
+            }
+
+            if (tiempoEstimadoHoras != null) {
+                solicitud.put("tiempoEstimado", tiempoEstimadoHoras);
+                log.info("Tiempo estimado calculado para la solicitud {}: {} horas", solicitudId, tiempoEstimadoHoras);
+            } else {
+                log.info("Tiempo estimado no disponible para la solicitud {}", solicitudId);
+            }
+
+            Map<String, Object> estado = obtenerEstadoActual(solicitud);
+            estado.put("idEstado", 5);
+            estado.put("nombre", "confirmada");
+            solicitud.put("estado", estado);
+
+            String url = UriComponentsBuilder
+                .fromUriString(Objects.requireNonNull(contenedoresServiceBaseUrl, "ms.contenedores.url no configurada"))
+                .path("/api/v1/solicitudes/{id}")
+                .buildAndExpand(solicitudId)
+                .toUriString();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(solicitud, headers);
+
+            HttpMethod method = Objects.requireNonNull(HttpMethod.PUT);
+            restTemplate.exchange(url, method, entity, Void.class);
+            log.info("Solicitud {} confirmada en ms-contenedores", solicitudId);
+        } catch (IllegalStateException | RestClientException ex) {
+            log.error("No se pudo confirmar la solicitud {}", solicitudId, ex);
+        }
+    }
+
     private void validarCapacidadesCamion(Integer solicitudId, Camion camion) {
         log.debug("Validando capacidades del camión {} para la solicitud {}", camion.getPatente(), solicitudId);
         SolicitudRemotaDTO solicitud = obtenerSolicitudRemota(solicitudId);
@@ -389,6 +435,41 @@ public class TramoService {
             log.error("Fallo al consultar la solicitud {}", solicitudId, ex);
             throw new IllegalStateException("No se pudo obtener la solicitud: " + solicitudId, ex);
         }
+    }
+
+    private Map<String, Object> obtenerSolicitudParaActualizacion(Integer solicitudId) {
+        String baseUrl = Objects.requireNonNull(contenedoresServiceBaseUrl, "ms.contenedores.url no configurada");
+
+        String url = UriComponentsBuilder
+            .fromUriString(baseUrl)
+            .path("/api/v1/solicitudes/{id}")
+            .buildAndExpand(solicitudId)
+            .toUriString();
+
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> solicitud = restTemplate.getForObject(url, Map.class);
+            return solicitud;
+        } catch (HttpClientErrorException ex) {
+            if (ex.getStatusCode().value() == HttpStatus.NOT_FOUND.value()) {
+                log.warn("Solicitud {} no encontrada al preparar la actualización de tiempo estimado", solicitudId);
+                return null;
+            }
+            log.error("Error http al buscar la solicitud {} para actualizar tiempo estimado", solicitudId, ex);
+            throw new IllegalStateException("No se pudo obtener la solicitud para actualizar el tiempo estimado", ex);
+        } catch (RestClientException ex) {
+            log.error("Fallo al obtener la solicitud {} para actualizar tiempo estimado", solicitudId, ex);
+            throw new IllegalStateException("No se pudo obtener la solicitud para actualizar el tiempo estimado", ex);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> obtenerEstadoActual(Map<String, Object> solicitud) {
+        Object estadoObj = solicitud.get("estado");
+        if (estadoObj instanceof Map<?, ?> estadoMap) {
+            return (Map<String, Object>) estadoMap;
+        }
+        return new HashMap<>();
     }
 
     private void solicitarRecalculoTarifaReal(Integer rutaId) {

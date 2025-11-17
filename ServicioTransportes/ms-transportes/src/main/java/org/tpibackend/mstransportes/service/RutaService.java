@@ -1,5 +1,6 @@
 package org.tpibackend.mstransportes.service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -158,6 +159,15 @@ public class RutaService {
         ruta.setCantidadDepositos(tramos.size() - 1);
         Ruta actualizada = persistirRuta(ruta);
         log.info("Ruta {} actualizada con {} tramos", actualizada.getIdRuta(), tramos.size());
+
+        Double tiempoEstimadoHoras = calcularTiempoEstimadoHoras(tramos);
+        if (tiempoEstimadoHoras != null) {
+            log.info("Tiempo estimado calculado para la solicitud {}: {} horas", ruta.getIdSolicitud(), tiempoEstimadoHoras);
+        } else {
+            log.warn("No se pudo determinar el tiempo estimado para la solicitud {}", ruta.getIdSolicitud());
+        }
+
+        tramosService.actualizarSolicitudDesdeRuta(ruta.getIdSolicitud(), tiempoEstimadoHoras);
         return actualizada; 
     }
 
@@ -166,4 +176,33 @@ public class RutaService {
         tramosService.setStrategyOsrmService(strategy);
     }
 
+    private Double calcularTiempoEstimadoHoras(List<Tramo> tramos) {
+        if (tramos.isEmpty()) {
+            return null;
+        }
+
+        LocalDateTime inicio = tramos.stream()
+            .map(Tramo::getFechaHoraInicioEstimada)
+            .filter(Objects::nonNull)
+            .min(LocalDateTime::compareTo)
+            .orElse(null);
+
+        LocalDateTime fin = tramos.stream()
+            .map(Tramo::getFechaHoraFinEstimada)
+            .filter(Objects::nonNull)
+            .max(LocalDateTime::compareTo)
+            .orElse(null);
+
+        if (inicio == null || fin == null) {
+            return null;
+        }
+
+        if (fin.isBefore(inicio)) {
+            return null;
+        }
+
+        Duration duracion = Duration.between(inicio, fin);
+        double horas = duracion.toSeconds() / 3600.0;
+        return Math.round(horas * 100.0d) / 100.0d;
+    }
 }
