@@ -62,6 +62,15 @@ public class TramoService {
 
     private static final Logger log = LoggerFactory.getLogger(TramoService.class);
 
+    private static final String ESTADO_TRAMO_EN_CAMINO = "en camino";
+    private static final String ESTADO_TRAMO_FINALIZADO = "finalizado";
+    private static final String ESTADO_CONTENEDOR_EN_VIAJE = "en viaje";
+    private static final String ESTADO_CONTENEDOR_EN_DEPOSITO = "en deposito";
+    private static final String ESTADO_CONTENEDOR_ENTREGADO = "entregado";
+    private static final String ESTADO_SOLICITUD_CONFIRMADA = "confirmada";
+    private static final String ESTADO_SOLICITUD_EN_PROCESO = "en proceso";
+    private static final String ESTADO_SOLICITUD_FINALIZADA = "finalizada";
+
     public TramoService(
         TramoRepository tramoRepository,
         OsrmService osrmService,
@@ -306,9 +315,14 @@ public class TramoService {
             throw new IllegalStateException("No se puede marcar en camino un tramo sin camión asignado");
         }
 
-        Estado estadoEnCamino = estadoService.getEstadoPorNombre("en camino");
+        Estado estadoEnCamino = estadoService.getEstadoPorNombre(ESTADO_TRAMO_EN_CAMINO);
         tramo.setEstado(estadoEnCamino);
+        Ruta ruta = tramo.getRuta();
+        Integer rutaId = ruta != null ? ruta.getIdRuta() : null;
+
         Tramo actualizado = persistirTramo(tramo);
+
+        manejarActualizacionesPostEnCamino(solicitudId, rutaId);
         log.info("Tramo {} de la solicitud {} marcado como en camino", tramoId, solicitudId);
         return actualizado;
     }
@@ -326,11 +340,25 @@ public class TramoService {
             throw new IllegalStateException("El tramo debe estar en estado en camino para marcarlo finalizado");
         }
 
-        Estado estadoFinalizado = estadoService.getEstadoPorNombre("finalizado");
+        Estado estadoFinalizado = estadoService.getEstadoPorNombre(ESTADO_TRAMO_FINALIZADO);
         tramo.setEstado(estadoFinalizado);
+
+        if (tramo.getCamion() != null) {
+            Camion camion = tramo.getCamion();
+            camion.setDisponibilidad(true);
+            camionService.persistirCamion(camion);
+            log.info("Camión {} liberado tras finalizar el tramo {}", camion.getPatente(), tramoId);
+        } else {
+            log.warn("El tramo {} finalizado no tenía un camión asignado", tramoId);
+        }
+
+        Ruta ruta = tramo.getRuta();
+        Integer rutaId = ruta != null ? ruta.getIdRuta() : null;
+
         Tramo tramoActualizado = persistirTramo(tramo);
 
-        Integer rutaId = tramoActualizado.getRuta() != null ? tramoActualizado.getRuta().getIdRuta() : null;
+        manejarActualizacionesPostFinalizado(solicitudId, rutaId);
+
         if (rutaId != null) {
             log.info("Solicitando recálculo de tarifa real para la ruta {}", rutaId);
             solicitarRecalculoTarifaReal(rutaId);
@@ -340,28 +368,37 @@ public class TramoService {
         return tramoActualizado;
     }
 
-    public void actualizarSolicitudDesdeRuta(Integer solicitudId, Double tiempoEstimadoHoras) {
+    public void actualizarSolicitudDesdeRuta(Integer solicitudId, Double tiempoEstimadoHoras, String nuevoEstado) {
         Objects.requireNonNull(solicitudId, "la id de la solicitud no puede ser nula");
         log.info("Actualizando solicitud {} desde ms-transportes", solicitudId);
 
         try {
             Map<String, Object> solicitud = obtenerSolicitudParaActualizacion(solicitudId);
             if (solicitud == null) {
-                log.warn("No se encontró la solicitud {} para confirmar desde ms-transportes", solicitudId);
+                log.warn("No se encontró la solicitud {} para actualizar desde ms-transportes", solicitudId);
                 return;
             }
+
+            boolean requiereActualizacion = false;
 
             if (tiempoEstimadoHoras != null) {
                 solicitud.put("tiempoEstimado", tiempoEstimadoHoras);
                 log.info("Tiempo estimado calculado para la solicitud {}: {} horas", solicitudId, tiempoEstimadoHoras);
-            } else {
-                log.info("Tiempo estimado no disponible para la solicitud {}", solicitudId);
+                requiereActualizacion = true;
             }
 
-            Map<String, Object> estado = obtenerEstadoActual(solicitud);
-            estado.put("idEstado", 5);
-            estado.put("nombre", "confirmada");
-            solicitud.put("estado", estado);
+            if (nuevoEstado != null) {
+                Map<String, Object> estado = obtenerEstadoActual(solicitud);
+                aplicarEstadoSolicitud(estado, nuevoEstado);
+                solicitud.put("estado", estado);
+                log.info("Estado de la solicitud {} actualizado a {}", solicitudId, nuevoEstado);
+                requiereActualizacion = true;
+            }
+
+            if (!requiereActualizacion) {
+                log.debug("No se registraron cambios para la solicitud {}", solicitudId);
+                return;
+            }
 
             String url = UriComponentsBuilder
                 .fromUriString(Objects.requireNonNull(contenedoresServiceBaseUrl, "ms.contenedores.url no configurada"))
@@ -376,10 +413,149 @@ public class TramoService {
 
             HttpMethod method = Objects.requireNonNull(HttpMethod.PUT);
             restTemplate.exchange(url, method, entity, Void.class);
-            log.info("Solicitud {} confirmada en ms-contenedores", solicitudId);
+            log.info("Solicitud {} actualizada en ms-contenedores", solicitudId);
         } catch (IllegalStateException | RestClientException ex) {
-            log.error("No se pudo confirmar la solicitud {}", solicitudId, ex);
+            log.error("No se pudo actualizar la solicitud {}", solicitudId, ex);
         }
+    }
+
+    private void manejarActualizacionesPostEnCamino(Integer solicitudId, Integer rutaId) {
+        Integer contenedorId = obtenerIdContenedorDeSolicitud(solicitudId);
+        if (contenedorId != null) {
+            actualizarEstadoContenedor(contenedorId, ESTADO_CONTENEDOR_EN_VIAJE);
+        } else {
+            log.warn("No se pudo actualizar el estado del contenedor para la solicitud {}", solicitudId);
+        }
+
+        if (rutaId == null) {
+            log.warn("No se pudo determinar la ruta asociada a la solicitud {} al marcar un tramo en camino", solicitudId);
+            return;
+        }
+
+        if (esPrimerTramoEnCamino(rutaId)) {
+            log.info("Primer tramo en camino detectado para la solicitud {}", solicitudId);
+            actualizarSolicitudDesdeRuta(solicitudId, null, ESTADO_SOLICITUD_EN_PROCESO);
+        }
+    }
+
+    private void manejarActualizacionesPostFinalizado(Integer solicitudId, Integer rutaId) {
+        Integer contenedorId = obtenerIdContenedorDeSolicitud(solicitudId);
+        if (rutaId == null) {
+            if (contenedorId != null) {
+                actualizarEstadoContenedor(contenedorId, ESTADO_CONTENEDOR_EN_DEPOSITO);
+            }
+            log.warn("No se pudo determinar la ruta asociada a la solicitud {} al finalizar un tramo", solicitudId);
+            return;
+        }
+
+        List<Tramo> tramosRuta = tramoRepository.findByRuta_IdRuta(rutaId);
+        boolean todosFinalizados = todosTramosFinalizados(tramosRuta);
+
+        if (contenedorId != null) {
+            String nuevoEstadoContenedor = todosFinalizados
+                ? ESTADO_CONTENEDOR_ENTREGADO
+                : ESTADO_CONTENEDOR_EN_DEPOSITO;
+            actualizarEstadoContenedor(contenedorId, nuevoEstadoContenedor);
+        } else {
+            log.warn("No se encontró contenedor asociado a la solicitud {} al finalizar un tramo", solicitudId);
+        }
+
+        if (todosFinalizados) {
+            log.info("Todos los tramos de la ruta {} están finalizados; actualizando solicitud {}", rutaId, solicitudId);
+            actualizarSolicitudDesdeRuta(solicitudId, null, ESTADO_SOLICITUD_FINALIZADA);
+        }
+    }
+
+    private Integer obtenerIdContenedorDeSolicitud(Integer solicitudId) {
+        try {
+            SolicitudRemotaDTO solicitud = obtenerSolicitudRemota(solicitudId);
+            if (solicitud != null && solicitud.getContenedor() != null) {
+                return solicitud.getContenedor().getIdContenedor();
+            }
+            log.warn("La solicitud {} no posee contenedor asociado", solicitudId);
+        } catch (EntityNotFoundException ex) {
+            log.warn("Solicitud {} no encontrada al buscar contenedor asociado", solicitudId);
+        } catch (IllegalStateException ex) {
+            log.error("Error al obtener la solicitud {} para determinar el contenedor asociado", solicitudId, ex);
+        }
+        return null;
+    }
+
+    private void actualizarEstadoContenedor(Integer contenedorId, String nuevoEstado) {
+        if (contenedorId == null) {
+            return;
+        }
+
+        log.info("Actualizando estado del contenedor {} a {}", contenedorId, nuevoEstado);
+
+        try {
+            String url = UriComponentsBuilder
+                .fromUriString(Objects.requireNonNull(contenedoresServiceBaseUrl, "ms.contenedores.url no configurada"))
+                .path("/api/v1/contenedores/{id}/estado")
+                .buildAndExpand(contenedorId)
+                .toUriString();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, String> body = Map.of("estado", nuevoEstado);
+            HttpEntity<Map<String, String>> entity = new HttpEntity<>(body, headers);
+
+            HttpMethod method = Objects.requireNonNull(HttpMethod.PUT);
+            restTemplate.exchange(url, method, entity, Void.class);
+            log.info("Estado del contenedor {} actualizado a {}", contenedorId, nuevoEstado);
+        } catch (RestClientException ex) {
+            log.error("No se pudo actualizar el estado del contenedor {}", contenedorId, ex);
+        }
+    }
+
+    private boolean esPrimerTramoEnCamino(Integer rutaId) {
+        List<Tramo> tramosRuta = tramoRepository.findByRuta_IdRuta(rutaId);
+        long tramosEnCamino = tramosRuta.stream()
+            .filter(tramo -> tieneEstado(tramo, ESTADO_TRAMO_EN_CAMINO))
+            .count();
+        return tramosEnCamino == 1;
+    }
+
+    private boolean todosTramosFinalizados(List<Tramo> tramosRuta) {
+        if (tramosRuta.isEmpty()) {
+            return false;
+        }
+        return tramosRuta.stream().allMatch(tramo -> tieneEstado(tramo, ESTADO_TRAMO_FINALIZADO));
+    }
+
+    private boolean tieneEstado(Tramo tramo, String estadoNombre) {
+        if (tramo == null || tramo.getEstado() == null || estadoNombre == null) {
+            return false;
+        }
+        return estadoNombre.equalsIgnoreCase(tramo.getEstado().getNombre());
+    }
+
+    private void aplicarEstadoSolicitud(Map<String, Object> estado, String nuevoEstado) {
+        if (estado == null || nuevoEstado == null) {
+            return;
+        }
+
+        estado.put("nombre", nuevoEstado);
+        Integer estadoId = obtenerIdEstadoSolicitud(nuevoEstado);
+        if (estadoId != null) {
+            estado.put("idEstado", estadoId);
+        } else {
+            log.warn("No se encontró un id configurado para el estado de solicitud '{}'", nuevoEstado);
+        }
+    }
+
+    private Integer obtenerIdEstadoSolicitud(String estadoNombre) {
+        if (estadoNombre == null) {
+            return null;
+        }
+
+        return switch (estadoNombre.toLowerCase()) {
+            case ESTADO_SOLICITUD_CONFIRMADA -> 5;
+            case ESTADO_SOLICITUD_EN_PROCESO -> 6;
+            case ESTADO_SOLICITUD_FINALIZADA -> 7;
+            default -> null;
+        };
     }
 
     private void validarCapacidadesCamion(Integer solicitudId, Camion camion) {

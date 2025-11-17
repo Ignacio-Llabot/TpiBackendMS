@@ -30,13 +30,17 @@ public class ContenedorService {
 
     private final RestTemplate restTemplate;
 
+    private final EstadoService estadoService;
+
     private static final Logger log = LoggerFactory.getLogger(ContenedorService.class);
 
     public ContenedorService(
         ContenedorRepository contenedorRepository,
-        RestTemplate restTemplate) {
+        RestTemplate restTemplate,
+        EstadoService estadoService) {
         this.contenedorRepository = contenedorRepository;
         this.restTemplate = restTemplate;
+        this.estadoService = estadoService;
     }
 
     public List<Contenedor> getContenedores() {
@@ -82,11 +86,25 @@ public class ContenedorService {
                 .toList();
     }
 
+    public void actualizarEstado(Integer contenedorId, String nombreEstado) {
+        Objects.requireNonNull(contenedorId, "El id del contenedor no puede ser nulo");
+        Objects.requireNonNull(nombreEstado, "El nombre del estado no puede ser nulo");
+
+        log.info("Actualizando estado del contenedor {} a {}", contenedorId, nombreEstado);
+
+        Contenedor contenedor = getContenedorPorId(contenedorId);
+        Estado nuevoEstado = estadoService.getEstadoPorNombre(nombreEstado);
+        contenedor.setEstado(nuevoEstado);
+
+        contenedorRepository.save(contenedor);
+        log.info("Estado del contenedor {} actualizado a {}", contenedorId, nombreEstado);
+    }
+
     public List<ContenedorUbicacionDTO> getContenedoresPendientes() {
         log.info("Iniciando búsqueda de contenedores pendientes");
     // Obtener contenedores pendientes
         List<Contenedor> listaContenedores = contenedorRepository.findAll().stream()
-            .filter(contenedor -> contenedor.getEstado().getNombre().equals("pendiente"))
+            .filter(contenedor -> contenedor.getEstado().getNombre().equals("por retirar"))
             .toList();
         log.info("Se encontraron {} contenedores pendientes", listaContenedores.size());
 

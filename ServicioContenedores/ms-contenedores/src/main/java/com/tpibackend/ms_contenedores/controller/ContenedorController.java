@@ -9,10 +9,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.tpibackend.ms_contenedores.dto.ActualizarEstadoContenedorRequest;
 import com.tpibackend.ms_contenedores.dto.ContenedorUbicacionDTO;
 import com.tpibackend.ms_contenedores.entity.Contenedor;
 import com.tpibackend.ms_contenedores.entity.Estado;
@@ -54,6 +56,17 @@ public class ContenedorController {
         Contenedor contenedorCreado = contenedorService.persistirContenedor(contenedor);
         log.info("Contenedor creado con id {}", contenedorCreado.getIdContenedor());
         return ResponseEntity.status(HttpStatus.CREATED).body(contenedorCreado);
+    }
+
+    @PutMapping("{id}/estado")
+    public ResponseEntity<Void> actualizarEstadoContenedor(
+        @PathVariable Integer id,
+        @RequestBody ActualizarEstadoContenedorRequest request
+    ) {
+        log.info("Actualizando estado del contenedor {} a {}", id, request.getEstado());
+        contenedorService.actualizarEstado(id, request.getEstado());
+        log.info("Estado del contenedor {} actualizado", id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/trackingPend")

@@ -167,7 +167,7 @@ public class RutaService {
             log.warn("No se pudo determinar el tiempo estimado para la solicitud {}", ruta.getIdSolicitud());
         }
 
-        tramosService.actualizarSolicitudDesdeRuta(ruta.getIdSolicitud(), tiempoEstimadoHoras);
+        tramosService.actualizarSolicitudDesdeRuta(ruta.getIdSolicitud(), tiempoEstimadoHoras, "confirmada");
         return actualizada; 
     }
 
